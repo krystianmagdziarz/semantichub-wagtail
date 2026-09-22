@@ -1,0 +1,42 @@
+[project]
+name = "semantichub-wagtail"
+version = "0.1.0"
+description = "Wagtail integration for SemanticHub: receives generated articles over webhooks and turns them into pages awaiting editorial approval."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Krystian Magdziarz" }]
+requires-python = ">=3.12"
+classifiers = [
+    "Framework :: Django",
+    "Framework :: Wagtail",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "wagtail>=7.0",
+    "djangorestframework>=3.15",
+    "httpx>=0.27",
+    "markdown-it-py>=3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/krystianmagdziarz/semantichub-wagtail"
+Issues = "https://github.com/krystianmagdziarz/semantichub-wagtail/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["semantichub_wagtail"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = ["."]
+testpaths = ["tests"]
