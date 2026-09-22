@@ -69,6 +69,6 @@ MEDIA_ROOT = BASE_DIR / "test-media"
 WAGTAIL_SITE_NAME = "Test"
 WAGTAILADMIN_BASE_URL = "http://testserver"
 
-SEMANTICHUB_INGEST_ADAPTER = "tests.testapp.adapter.TestArticleAdapter"
+SEMANTICHUB_INGEST_ADAPTER = "tests.testapp.adapter.ExampleArticleAdapter"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
