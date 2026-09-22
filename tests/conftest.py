@@ -17,3 +17,8 @@ def article_index(db):
 @pytest.fixture
 def api_client():
     return APIClient()
+
+
+@pytest.fixture(autouse=True)
+def _isolated_media(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path / "media"
