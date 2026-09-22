@@ -31,6 +31,11 @@ def _signature_authorized(request, secret):
     return hmac.compare_digest(signature.removeprefix("sha256=").strip(), expected)
 
 
+def is_signed(request):
+    secret = getattr(settings, "SEMANTICHUB_INGEST_SECRET", "") or ""
+    return bool(secret) and _signature_authorized(request, secret)
+
+
 def is_authorized(request):
     token = getattr(settings, "SEMANTICHUB_INGEST_TOKEN", "") or ""
     secret = getattr(settings, "SEMANTICHUB_INGEST_SECRET", "") or ""

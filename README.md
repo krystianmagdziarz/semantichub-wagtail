@@ -147,6 +147,25 @@ and responds with:
 
 `outcome` is one of `moderation`, `draft`, `published`.
 
+## Language-pair endpoint
+
+`POST <prefix>/pair/` receives a signed delivery carrying both language
+versions of one article (`result_id`, `revision`, `locales.en`, `locales.pl`)
+and hands it to a second adapter configured via
+`SEMANTICHUB_INGEST_PAIR_ADAPTER` — a class with a single
+`upsert(publication, data, revision)` method that creates or updates both
+pages and returns the publication record. This endpoint accepts HMAC-signed
+requests only; the bearer token never authorizes it.
+
+Transport rules are stricter than on the article endpoint:
+
+- every request must carry an `X-SH-Delivery` id; replaying it returns
+  `200 duplicate`, reusing it with a different payload returns `409`
+- a `revision` lower than the stored one returns `409`, so late retries can
+  never roll a publication back
+- redelivering the current revision with an identical payload is a `duplicate`;
+  the same revision with different content is a `409`
+
 ## Development
 
 ```bash
