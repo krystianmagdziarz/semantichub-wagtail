@@ -14,7 +14,7 @@ def make_payload(**overrides):
         "mode": "article",
         "event": "workflow.action",
         "workflow_execution": "exec-abc-123",
-        "workflow_name": "kmagdziarz - passive income",
+        "workflow_name": "Blog - passive income",
         "title": "Editor title",
         "lead": "Editor lead.",
         "executed_at": "2026-07-21T09:30:00+00:00",
@@ -29,7 +29,7 @@ def make_payload(**overrides):
             }
         ],
         "llm_response": "## Intro\n\nBody text.\n",
-        "ai_model": "openai/gpt-5.4",
+        "ai_model": "provider/model",
         "tokens_used": 1234,
         "cost": 0.01,
     }
