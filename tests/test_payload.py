@@ -259,3 +259,48 @@ def test_article_for_locale_renders_markdown_when_html_missing():
 def test_v5_invalid_shapes(broken):
     with pytest.raises(InvalidPayload):
         parse_identity(make_v5_payload(**broken))
+
+
+def test_body_html_is_sanitized_not_reinterpreted():
+    html = (
+        "Plain start with <b>bold</b>.<script>alert(1)</script>"
+        "<h2>H</h2><ul><li>x</li></ul><table><tr><td>c</td></tr></table>"
+        '<blockquote>q</blockquote><a href="https://example.com">l</a>'
+    )
+    data = make_v5_payload()
+    data["locales"]["pl"]["body_html"] = html
+    body = parse_article(data).body
+    assert "&lt;" not in body and "<b>bold</b>" in body
+    assert "<script>" not in body and "alert(1)" not in body
+    for tag in ("<h2>", "<ul>", "<table>", "<blockquote>", "<a "):
+        assert tag in body
+
+
+def test_unsupported_version_rejected_without_result_id():
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_payload(payload_version=4))
+
+
+def test_source_lang_validated_when_locales_empty():
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_v5_payload(locales={}, source_lang="de", pair_source_lang="de"))
+
+
+def test_v5_without_locales_takes_source_language():
+    data = make_v5_payload(locales={})
+    identity = parse_identity(data)
+    assert identity.locales == {} and identity.source_lang == "pl"
+    article = parse_article(data)
+    assert article.language == "pl" and article.title == "Editor title"
+
+
+@pytest.mark.parametrize("revision", [True, 1.5, "abc"])
+def test_revision_must_be_integer(revision):
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_v5_payload(revision=revision))
+
+
+def test_seo_description_capped():
+    data = make_v5_payload()
+    data["locales"]["pl"]["seo_description"] = "x" * 400
+    assert len(parse_article(data).seo_description) == 255
