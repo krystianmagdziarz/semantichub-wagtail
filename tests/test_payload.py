@@ -310,3 +310,33 @@ def test_seo_description_capped():
     data = make_v5_payload()
     data["locales"]["pl"]["seo_description"] = "x" * 400
     assert len(parse_article(data).seo_description) == 255
+
+
+def test_v5_empty_source_title_and_lead_fall_back_like_v3():
+    data = make_v5_payload(title="", lead="")
+    data["locales"]["pl"]["title"] = ""
+    data["locales"]["pl"]["lead"] = ""
+    data["locales"]["pl"]["slug"] = ""
+    assert parse_identity(data).source_lang == "pl"
+    article = parse_article(data)
+    assert article.title == "How to build passive income"
+    assert article.lead == "A practical guide."
+    assert article.slug_base == "how-to-build-passive-income"
+
+
+def test_v5_other_language_with_empty_title_takes_source_title():
+    data = make_v5_payload()
+    data["locales"]["en"]["title"] = ""
+    data["locales"]["en"]["lead"] = ""
+    article = article_for_locale(data, "en", data["locales"]["en"])
+    assert article.title == "Tytuł PL"
+    assert article.lead == ""
+    assert article.slug_base == "title-en"
+
+
+def test_v5_both_titles_empty_fall_back_to_cluster_name():
+    data = make_v5_payload(title="")
+    data["locales"]["pl"]["title"] = ""
+    data["locales"]["en"]["title"] = ""
+    article = article_for_locale(data, "en", data["locales"]["en"])
+    assert article.title == "How to build passive income"

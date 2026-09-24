@@ -57,6 +57,13 @@ def _version(data):
         raise InvalidPayload("payload_version must be an integer") from error
 
 
+def _source_lang(data, locales):
+    source = content.text(data.get("source_lang")) or content.text(data.get("pair_source_lang"))
+    if not source and isinstance(locales, dict) and len(locales) == 1:
+        source = next(iter(locales))
+    return source
+
+
 def parse_identity(data):
     """Delivery identity of a v5 payload; None for a payload without result_id."""
     if not isinstance(data, dict):
@@ -88,11 +95,9 @@ def parse_identity(data):
     for code, locale in locales.items():
         if code not in allowed:
             raise InvalidPayload(f"language {code!r} is not accepted here")
-        if not isinstance(locale, dict) or not content.text(locale.get("title")):
-            raise InvalidPayload(f"locales.{code} must be an object with a title")
-    source = content.text(data.get("source_lang")) or content.text(data.get("pair_source_lang"))
-    if not source and len(locales) == 1:
-        source = next(iter(locales))
+        if not isinstance(locale, dict):
+            raise InvalidPayload(f"locales.{code} must be an object")
+    source = _source_lang(data, locales)
     if locales and source not in locales:
         raise InvalidPayload("source language is missing from locales")
     if source and source not in allowed:
@@ -111,8 +116,8 @@ def _locale_body(locale):
     return content.render_body(body if isinstance(body, str) else "")
 
 
-def _locale_slug_base(locale):
-    source = content.text(locale.get("slug")) or content.text(locale.get("title"))
+def _locale_slug_base(locale, title):
+    source = content.text(locale.get("slug")) or title
     return slugify(source)[:MAX_SLUG_BASE_LENGTH].strip("-")
 
 
@@ -124,12 +129,29 @@ def _first_cluster(data):
 
 
 def article_for_locale(data, language_code, locale):
-    """Article for one language of a v5 delivery."""
+    """Article for one language of a v5 delivery.
+
+    The sender may leave title and lead empty. The source language then falls
+    back like v3 (cluster name, cluster description); another language takes
+    the source title, so no page is created without a title."""
     cluster = _first_cluster(data)
+    locales = data.get("locales") if isinstance(data.get("locales"), dict) else {}
+    source = _source_lang(data, locales)
+    title = content.text(locale.get("title"))
+    lead = content.text(locale.get("lead"))
+    if language_code == source:
+        title = title or content.article_title(data, cluster)
+        lead = lead or content.excerpt(data, cluster)
+    elif not title:
+        source_locale = locales.get(source)
+        if isinstance(source_locale, dict):
+            title = content.text(source_locale.get("title"))
+        title = title or content.article_title(data, cluster)
+    title = title[:255]
     return Article(
-        title=content.text(locale.get("title"))[:255],
-        slug_base=_locale_slug_base(locale),
-        lead=content.text(locale.get("lead")),
+        title=title,
+        slug_base=_locale_slug_base(locale, title),
+        lead=lead,
         body=_locale_body(locale),
         tags=content.tags(data, cluster),
         publish_date=_publish_date(data),

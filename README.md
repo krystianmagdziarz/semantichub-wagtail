@@ -131,8 +131,8 @@ class BlogArticleAdapter(ArticleAdapter):
 
 | Attribute | Type | Source |
 | --- | --- | --- |
-| `title` | `str` | v5: `locales.<lang>.title`; v3: `title`, falling back to the topic name; at most 255 characters |
-| `lead` | `str` | v5: `locales.<lang>.lead`; v3: `lead`, falling back to the topic description |
+| `title` | `str` | v5: `locales.<lang>.title`; when empty, the source language falls back like v3 and another language takes the source title; v3: `title`, falling back to the topic name; at most 255 characters |
+| `lead` | `str` | v5: `locales.<lang>.lead`; when empty, the source language falls back like v3; v3: `lead`, falling back to the topic description |
 | `body` | `str` | v5: `locales.<lang>.body_html` sanitised, falling back to `locales.<lang>.body` rendered from Markdown; v3: `llm_response` rendered to safe HTML |
 | `language` | `str \| None` | the language code of this page (v5); `None` for a v3 delivery |
 | `seo_description` | `str` | v5: `locales.<lang>.seo_description`, at most 255 characters; empty for v3 |
@@ -224,6 +224,10 @@ HMAC signature. The payload decides the path:
 The receiver never requires a language pair; whether both languages are sent
 is the sender's decision.
 
+A delivery with `test_delivery: true` (the "Send test" button in SemanticHub)
+is answered `200 {"status": "ignored", "reason": "test_delivery"}` on both
+paths and creates no publication, page or receipt.
+
 Responses for v2 and v3:
 
 | Status | Body | When |
@@ -268,7 +272,7 @@ Payload fields read by the package:
 | `result_id` | v5: UUID of the result chain; its presence selects the v5 path |
 | `revision` | v5: integer from 1 to 2^31-1, default 1 |
 | `source_lang` | v5: source language code (`pair_source_lang` is accepted as an alias) |
-| `locales` | v5: optional object keyed by language code; each entry needs `title` and may carry `slug`, `lead`, `body`, `body_html` and `seo_description` |
+| `locales` | v5: optional object keyed by language code; each entry is an object that may carry `title`, `slug`, `lead`, `body`, `body_html` and `seo_description` |
 | `workflow_execution` | v5: id of the delivered result, used to adopt a page created before v5 |
 
 ## Security model

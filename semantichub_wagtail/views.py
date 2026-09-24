@@ -110,6 +110,13 @@ class InboundArticleView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if data.get("test_delivery") is True:
+            # "Send test" from SemanticHub: a production site creates no test pages.
+            return Response(
+                {"status": "ignored", "reason": "test_delivery"},
+                status=status.HTTP_200_OK,
+            )
+
         adapter = get_adapter()
         if identity is None:
             return self._legacy(request, article, adapter)

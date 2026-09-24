@@ -20,6 +20,11 @@ All notable changes to this project are documented here. The format follows
 - Pages created before v5 are adopted by the delivery's `workflow_execution`
   (the old `Idempotency-Key`) or by the chain root.
 - `revision` above 2^31-1 is rejected with 400.
+- An empty `title` or `lead` in the source language of a v5 delivery falls
+  back like v3 (topic name, topic description); another language with an
+  empty `title` takes the source title.
+- A delivery with `test_delivery: true` is answered `200` with
+  `{"status": "ignored", "reason": "test_delivery"}` and saves nothing.
 
 ## [0.1.0]
 

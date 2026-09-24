@@ -63,6 +63,13 @@ class TestInboundArticle:
         assert response.status_code == status.HTTP_201_CREATED
         assert ArticlePage.objects.filter(slug="passive-income").exists()
 
+    def test_test_delivery_is_ignored_without_any_record(self, api_client, article_index):
+        response = post(api_client, payload=make_payload(test_delivery=True))
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() == {"status": "ignored", "reason": "test_delivery"}
+        assert not ArticlePage.objects.exists()
+        assert not IngestReceipt.objects.exists()
+
     def test_page_is_mapped_from_payload(self, api_client, article_index):
         post(api_client)
         page = ArticlePage.objects.get(slug="passive-income")

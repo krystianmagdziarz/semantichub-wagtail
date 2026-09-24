@@ -54,6 +54,26 @@ def post_v5(
 
 @pytest.mark.django_db
 class TestV5Delivery:
+    def test_test_delivery_is_ignored_without_any_record(self, api_client, article_index):
+        r = post_v5(api_client, make_v5_payload(test_delivery=True))
+        assert r.status_code == status.HTTP_200_OK, r.content
+        assert r.json() == {"status": "ignored", "reason": "test_delivery"}
+        assert not IngestPublication.objects.exists()
+        assert not IngestPublicationPage.objects.exists()
+        assert not IngestDelivery.objects.exists()
+        assert not ArticlePage.objects.exists()
+
+    def test_empty_source_title_and_lead_publish_with_cluster_fallbacks(
+        self, api_client, article_index
+    ):
+        data = make_v5_payload(title="", lead="")
+        data["locales"] = {"pl": dict(data["locales"]["pl"], title="", lead="", slug="")}
+        r = post_v5(api_client, data)
+        assert r.status_code == status.HTTP_201_CREATED, r.content
+        page = IngestPublication.objects.get(result_id=RESULT_ID).page_for("pl").specific
+        assert page.title == "How to build passive income"
+        assert page.excerpt == "A practical guide."
+
     def test_two_languages_create_two_pages_under_their_indexes(
         self, api_client, article_index, article_index_en
     ):
