@@ -31,14 +31,28 @@ class IngestPublication(models.Model):
         on_delete=models.SET_NULL,
         related_name="+",
     )
-    en_page = models.ForeignKey(
-        "wagtailcore.Page",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="+",
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.result_id} rev {self.revision}"
+
+    def page_for(self, language_code):
+        link = self.pages.filter(language_code=language_code).select_related("page").first()
+        return link.page if link is not None and link.page_id else None
+
+
+class IngestPublicationPage(models.Model):
+    """One page per language of a publication. A v5 delivery may carry one
+    language or several; the set is open (see SEMANTICHUB_INGEST_LANGUAGES)."""
+
+    publication = models.ForeignKey(
+        IngestPublication,
+        on_delete=models.CASCADE,
+        related_name="pages",
     )
-    pl_page = models.ForeignKey(
+    language_code = models.CharField(max_length=16)
+    page = models.ForeignKey(
         "wagtailcore.Page",
         null=True,
         blank=True,
@@ -46,10 +60,17 @@ class IngestPublication(models.Model):
         related_name="+",
     )
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("publication", "language_code"),
+                name="uq_ingest_publication_page_language",
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.result_id} rev {self.revision}"
+        return f"{self.publication_id}:{self.language_code} -> page {self.page_id}"
 
 
 class IngestDelivery(models.Model):
