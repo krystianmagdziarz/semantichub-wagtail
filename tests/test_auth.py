@@ -28,9 +28,7 @@ def _request(rf, headers=None):
 
 def _sign(body, secret=SECRET, timestamp=None):
     timestamp = str(int(time.time())) if timestamp is None else str(timestamp)
-    digest = hmac.new(
-        secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256
-    ).hexdigest()
+    digest = hmac.new(secret.encode(), timestamp.encode() + b"." + body, hashlib.sha256).hexdigest()
     return timestamp, digest
 
 
@@ -65,49 +63,37 @@ class TestHmacSignature:
     def test_valid_signature_is_authorized(self, rf, settings):
         settings.SEMANTICHUB_INGEST_SECRET = SECRET
         timestamp, digest = _sign(BODY)
-        request = _request(
-            rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest}
-        )
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest})
         assert is_authorized(request) is True
 
     def test_sha256_prefix_is_accepted(self, rf, settings):
         settings.SEMANTICHUB_INGEST_SECRET = SECRET
         timestamp, digest = _sign(BODY)
-        request = _request(
-            rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": f"sha256={digest}"}
-        )
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": f"sha256={digest}"})
         assert is_authorized(request) is True
 
     def test_wrong_signature_is_rejected(self, rf, settings):
         settings.SEMANTICHUB_INGEST_SECRET = SECRET
         timestamp, _ = _sign(BODY)
-        request = _request(
-            rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": "0" * 64}
-        )
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": "0" * 64})
         assert is_authorized(request) is False
 
     def test_signature_over_different_body_is_rejected(self, rf, settings):
         settings.SEMANTICHUB_INGEST_SECRET = SECRET
         timestamp, digest = _sign(b'{"mode": "tampered"}')
-        request = _request(
-            rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest}
-        )
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest})
         assert is_authorized(request) is False
 
     def test_stale_timestamp_is_rejected(self, rf, settings):
         settings.SEMANTICHUB_INGEST_SECRET = SECRET
         timestamp, digest = _sign(BODY, timestamp=int(time.time()) - 3600)
-        request = _request(
-            rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest}
-        )
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest})
         assert is_authorized(request) is False
 
     def test_garbage_timestamp_is_rejected(self, rf, settings):
         settings.SEMANTICHUB_INGEST_SECRET = SECRET
         _, digest = _sign(BODY)
-        request = _request(
-            rf, {"X-SH-Timestamp": "yesterday", "X-SH-Signature": digest}
-        )
+        request = _request(rf, {"X-SH-Timestamp": "yesterday", "X-SH-Signature": digest})
         assert is_authorized(request) is False
 
     def test_bearer_does_not_satisfy_signature_only_config(self, rf, settings):
@@ -127,7 +113,5 @@ class TestBothConfigured:
         settings.SEMANTICHUB_INGEST_TOKEN = TOKEN
         settings.SEMANTICHUB_INGEST_SECRET = SECRET
         timestamp, digest = _sign(BODY)
-        request = _request(
-            rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest}
-        )
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest})
         assert is_authorized(request) is True

@@ -12,7 +12,7 @@ def _bearer_authorized(request, token):
     prefix = "Bearer "
     if not header.startswith(prefix):
         return False
-    return hmac.compare_digest(header[len(prefix):].strip(), token)
+    return hmac.compare_digest(header[len(prefix) :].strip(), token)
 
 
 def _signature_authorized(request, secret):
@@ -41,6 +41,4 @@ def is_authorized(request):
     secret = getattr(settings, "SEMANTICHUB_INGEST_SECRET", "") or ""
     if secret and _signature_authorized(request, secret):
         return True
-    if token and _bearer_authorized(request, token):
-        return True
-    return False
+    return bool(token) and _bearer_authorized(request, token)

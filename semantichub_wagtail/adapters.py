@@ -25,9 +25,7 @@ class PairAdapter:
 def _load(setting_name, base_hint):
     dotted_path = getattr(settings, setting_name, "") or ""
     if not dotted_path:
-        raise ImproperlyConfigured(
-            f"{setting_name} must point to a {base_hint} subclass"
-        )
+        raise ImproperlyConfigured(f"{setting_name} must point to a {base_hint} subclass")
     return import_string(dotted_path)()
 
 

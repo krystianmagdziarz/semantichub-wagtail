@@ -13,9 +13,7 @@ class TestIngestReceipt:
             IngestReceipt.objects.create(idempotency_key="k1")
 
     def test_receipt_survives_page_deletion(self, article_index):
-        page = article_index.add_child(
-            instance=ArticlePage(title="A", slug="a")
-        )
+        page = article_index.add_child(instance=ArticlePage(title="A", slug="a"))
         receipt = IngestReceipt.objects.create(idempotency_key="k1", page=page)
         page.delete()
         receipt.refresh_from_db()

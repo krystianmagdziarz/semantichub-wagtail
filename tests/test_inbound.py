@@ -136,9 +136,7 @@ class TestRepeatDelivery:
         assert first.status_code == status.HTTP_201_CREATED
         second = post(
             api_client,
-            payload=make_payload(
-                title="Corrected title", llm_response="<p>Corrected body.</p>"
-            ),
+            payload=make_payload(title="Corrected title", llm_response="<p>Corrected body.</p>"),
             idem_key="dup-key",
         )
         assert second.status_code == status.HTTP_200_OK

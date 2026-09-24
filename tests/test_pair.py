@@ -17,9 +17,7 @@ SECRET = "pair-secret"
 @pytest.fixture(autouse=True)
 def _pair_settings(settings):
     settings.SEMANTICHUB_INGEST_SECRET = SECRET
-    settings.SEMANTICHUB_INGEST_PAIR_ADAPTER = (
-        "tests.testapp.adapter.ExamplePairAdapter"
-    )
+    settings.SEMANTICHUB_INGEST_PAIR_ADAPTER = "tests.testapp.adapter.ExamplePairAdapter"
 
 
 def make_pair_payload(**overrides):
@@ -49,9 +47,11 @@ def make_pair_payload(**overrides):
 
 
 def post_pair(client, payload=None, delivery_id="dl-1", secret=SECRET, body=None):
-    body = body if body is not None else json.dumps(
-        payload if payload is not None else make_pair_payload()
-    ).encode()
+    body = (
+        body
+        if body is not None
+        else json.dumps(payload if payload is not None else make_pair_payload()).encode()
+    )
     headers = {}
     if secret is not None:
         timestamp = str(int(time.time()))

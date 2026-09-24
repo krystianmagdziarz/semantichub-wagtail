@@ -35,9 +35,7 @@ class InboundArticleView(APIView):
 
         idem_key = request.headers.get("Idempotency-Key")
         receipt = (
-            IngestReceipt.objects.filter(idempotency_key=idem_key).first()
-            if idem_key
-            else None
+            IngestReceipt.objects.filter(idempotency_key=idem_key).first() if idem_key else None
         )
         if receipt is not None:
             if receipt.page is None:
@@ -145,9 +143,7 @@ class InboundPairView(APIView):
 
         with transaction.atomic():
             delivery = (
-                IngestDelivery.objects.select_for_update()
-                .filter(delivery_id=delivery_id)
-                .first()
+                IngestDelivery.objects.select_for_update().filter(delivery_id=delivery_id).first()
             )
             if delivery is not None:
                 if delivery.payload_hash != digest:
@@ -161,9 +157,7 @@ class InboundPairView(APIView):
                 )
 
             publication = (
-                IngestPublication.objects.select_for_update()
-                .filter(result_id=result_id)
-                .first()
+                IngestPublication.objects.select_for_update().filter(result_id=result_id).first()
             )
             if publication is not None and revision < publication.revision:
                 return Response(

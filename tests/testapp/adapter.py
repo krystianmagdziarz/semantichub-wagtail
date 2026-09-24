@@ -33,12 +33,8 @@ class ExamplePairAdapter(PairAdapter):
         index = ArticleIndexPage.objects.first()
         if publication is None:
             publication = IngestPublication()
-            en_page = index.add_child(
-                instance=ArticlePage(**self._fields(data["locales"]["en"]))
-            )
-            pl_page = index.add_child(
-                instance=ArticlePage(**self._fields(data["locales"]["pl"]))
-            )
+            en_page = index.add_child(instance=ArticlePage(**self._fields(data["locales"]["en"])))
+            pl_page = index.add_child(instance=ArticlePage(**self._fields(data["locales"]["pl"])))
         else:
             en_page = publication.en_page.specific
             pl_page = publication.pl_page.specific
