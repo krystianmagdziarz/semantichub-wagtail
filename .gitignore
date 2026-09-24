@@ -9,3 +9,7 @@ build/
 htmlcov/
 db.sqlite3
 test-media/
+.ruff_cache/
+.idea/
+.vscode/
+.DS_Store
