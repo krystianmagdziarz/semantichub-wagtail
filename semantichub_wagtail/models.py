@@ -23,7 +23,7 @@ class IngestPublication(models.Model):
     result_id = models.UUIDField(unique=True)
     revision = models.PositiveIntegerField()
     payload_hash = models.CharField(max_length=64)
-    image_url = models.URLField(blank=True)
+    image_url = models.URLField(max_length=2048, blank=True)
     image = models.ForeignKey(
         "wagtailimages.Image",
         null=True,

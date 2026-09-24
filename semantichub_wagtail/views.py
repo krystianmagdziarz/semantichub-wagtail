@@ -18,6 +18,7 @@ from semantichub_wagtail.payload import InvalidPayload, parse_article
 from semantichub_wagtail.publish import apply_policy, ingest_user, resolve_mode
 
 MAX_KEY_LENGTH = 255
+MAX_REVISION = 2**31 - 1
 
 
 def find_receipt(key):
@@ -122,6 +123,33 @@ class InboundArticleView(APIView):
         return _page_response("updated", page, outcome, status.HTTP_200_OK)
 
 
+def _parse_pair(body):
+    try:
+        data = json.loads(body)
+    except (ValueError, RecursionError) as error:
+        raise ValueError("body is not valid JSON") from error
+    if not isinstance(data, dict):
+        raise ValueError("payload must be an object")
+    try:
+        result_id = UUID(str(data["result_id"]))
+        revision = data["revision"]
+        locales = data["locales"]
+    except KeyError as error:
+        raise ValueError("missing field") from error
+    if type(revision) is not int or not 1 <= revision <= MAX_REVISION:
+        raise ValueError("revision out of range")
+    if not isinstance(locales, dict) or not all(
+        isinstance(locales.get(code), dict) for code in ("en", "pl")
+    ):
+        raise ValueError("locales.en and locales.pl must be objects")
+    image = data.get("image")
+    if image is not None and not isinstance(image, dict):
+        raise ValueError("image must be an object")
+    if image and not isinstance(image.get("url") or "", str):
+        raise ValueError("image.url must be a string")
+    return data, result_id, revision
+
+
 class InboundPairView(APIView):
     authentication_classes = ()
     permission_classes = (AllowAny,)
@@ -136,26 +164,17 @@ class InboundPairView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         try:
-            data = json.loads(body)
-            result_id = UUID(str(data["result_id"]))
-            revision = int(data["revision"])
-            locales = data["locales"]
-            if (
-                revision < 1
-                or not isinstance(locales.get("en"), dict)
-                or not isinstance(locales.get("pl"), dict)
-            ):
-                raise ValueError
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            data, result_id, revision = _parse_pair(body)
+        except ValueError as error:
             return Response(
-                {"detail": "invalid pair payload"},
+                {"detail": f"invalid pair payload: {error}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         delivery_id = request.headers.get("X-SH-Delivery", "").strip()
-        if not delivery_id:
+        if not delivery_id or len(delivery_id) > MAX_KEY_LENGTH:
             return Response(
-                {"detail": "X-SH-Delivery is required"},
+                {"detail": f"X-SH-Delivery is required, up to {MAX_KEY_LENGTH} characters"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         digest = hashlib.sha256(body).hexdigest()
@@ -208,7 +227,7 @@ class InboundPairView(APIView):
             publication.result_id = result_id
             publication.revision = revision
             publication.payload_hash = digest
-            publication.image_url = (data.get("image") or {}).get("url", "")
+            publication.image_url = (data.get("image") or {}).get("url") or ""
             publication.save()
             IngestDelivery.objects.create(
                 delivery_id=delivery_id,

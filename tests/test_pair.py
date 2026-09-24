@@ -193,3 +193,41 @@ class TestPairProjectDefaults:
             HTTP_X_SH_DELIVERY="dl-basic",
         )
         assert response.status_code == status.HTTP_201_CREATED
+
+
+@pytest.mark.django_db
+class TestPairHostileInput:
+    @pytest.mark.parametrize("locales", [[], "en", None, {"en": {}, "pl": "x"}])
+    def test_malformed_locales_return_400(self, api_client, article_index, locales):
+        response = post_pair(api_client, make_pair_payload(locales=locales))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize("body", [b"[]", b'"text"', b"null", b'{"revision": 1e400}'])
+    def test_non_object_or_overflowing_json_returns_400(self, api_client, article_index, body):
+        response = post_pair(api_client, body=body)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @pytest.mark.parametrize("revision", [1e400, 2**31, "1", 1.5, True])
+    def test_unusable_revision_returns_400(self, api_client, article_index, revision):
+        body = json.dumps(make_pair_payload(revision=revision)).encode()
+        response = post_pair(api_client, body=body)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not IngestPublication.objects.exists()
+
+    @pytest.mark.parametrize("image", ["https://example.com/a.png", ["x"], {"url": 42}])
+    def test_malformed_image_returns_400(self, api_client, article_index, image):
+        response = post_pair(api_client, make_pair_payload(image=image))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not IngestPublication.objects.exists()
+
+    def test_overlong_delivery_id_returns_400(self, api_client, article_index):
+        response = post_pair(api_client, delivery_id="d" * 256)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_long_signed_image_url_is_stored_whole(self, api_client, article_index):
+        url = "https://cdn.example.com/cover.png?" + "X-Signature=" + "a" * 900
+        response = post_pair(api_client, make_pair_payload(image={"url": url}))
+        assert response.status_code == status.HTTP_201_CREATED
+        publication = IngestPublication.objects.get()
+        assert publication.image_url == url
+        publication.full_clean()
