@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.2.0 (2026-09-24)
+All notable changes to this project are documented here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
+[Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [0.2.0] - 2026-09-25
 
 - One inbound endpoint accepts both the v3 article payload and the v5 payload
   (`result_id`, `revision`, `locales`). The signed language-pair endpoint
@@ -15,6 +21,25 @@
   (the old `Idempotency-Key`) or by the chain root.
 - `revision` above 2^31-1 is rejected with 400.
 
-## 0.1.0
+## [0.1.0]
 
-- Initial release: inbound endpoint, publish policy, signed pair endpoint.
+First public release.
+
+### Added
+
+- `POST inbound/` endpoint for SemanticHub article deliveries (payload v2 and
+  v3) with bearer token and HMAC signature authentication.
+- `ArticleAdapter` contract for mapping deliveries onto your own page models.
+- Moderation, draft and publish policies, with direct publish gated by the
+  Wagtail `publish` permission of an inactive `semantichub` service account.
+- Idempotent redeliveries through `Idempotency-Key` and `IngestReceipt`.
+- `POST pair/` endpoint for signed English and Polish versions of one result,
+  with `X-SH-Delivery` deduplication, a revision guard that returns the stored
+  revision on `409`, and the `PairAdapter` contract.
+- Markdown rendering with raw HTML escaped and nh3 sanitising of HTML bodies.
+- Cover image downloads restricted to public HTTPS hosts, pinned to the
+  resolved address, with redirect, size, time and file type limits.
+
+[Unreleased]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/releases/tag/v0.1.0

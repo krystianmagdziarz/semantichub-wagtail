@@ -124,7 +124,7 @@ class BlogArticleAdapter(ArticleAdapter):
 | --- | --- | --- | --- |
 | `get_parent(article)` | yes | every new page, once per language | return the parent page, or `None` to answer `500` so SemanticHub retries |
 | `build(article)` | yes | every new page, once per language | return an unsaved page instance; the package sets the slug, adds it under the parent and saves a revision |
-| `update(page, article)` | yes | a redelivery of a known `Idempotency-Key` (v3) or a newer revision of a known result (v5) | copy fields onto `page` without saving |
+| `update(page, article)` | yes | a redelivery of a known `Idempotency-Key` (v3), a newer revision of a known result (v5), or the first v5 delivery of a result whose page was created before v5 and is adopted for the source language | copy fields onto `page` without saving |
 | `apply_tags(page, tags)` | no | when the delivery has tags | attach the tag names to `page` |
 
 `article` is a `semantichub_wagtail.payload.Article`:
@@ -211,7 +211,12 @@ HMAC signature. The payload decides the path:
   needs an `X-SH-Delivery` header, or `Idempotency-Key` as a fallback, of at
   most 255 characters. `locales` holds one to N languages, each from
   `SEMANTICHUB_INGEST_LANGUAGES` (by default `pl` and `en`). The source
-  language comes from `source_lang`. Each language gets its own page, and
+  language comes from `source_lang` (or `pair_source_lang`). When neither is
+  sent and `locales` holds exactly one language, that language is the source.
+  When `locales` is missing or empty and no source language is sent, the page
+  gets the default language: the language of the Wagtail default `Locale` if
+  it is in `SEMANTICHUB_INGEST_LANGUAGES`, otherwise the first entry of that
+  setting. Each language gets its own page, and
   each page goes through the publish policy. A delivery without `locales`
   creates one page from `llm_response` under the source language. A page
   created before v5 for the same result is adopted instead of duplicated.
@@ -240,6 +245,7 @@ Responses for v5:
 | `200` | `{"status": "duplicate", "result_id", "revision"}` | a replayed delivery id, or the stored revision redelivered with identical bytes |
 | `400` | `{"detail"}` | invalid payload, a language outside `SEMANTICHUB_INGEST_LANGUAGES`, `revision` outside 1 to 2^31-1, or a missing or overlong delivery id |
 | `401` | `{"detail"}` | missing or invalid credentials |
+| `415` | `{"detail"}` | the body is not `application/json` |
 | `409` | `{"detail", "result_id", "revision"}` | an older revision than the stored one, the stored revision with different content, or a delivery id reused with a different payload; `revision` is the stored one |
 | `500` | `{"detail"}` | the adapter returned no parent page for one of the languages; nothing is saved |
 
