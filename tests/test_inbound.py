@@ -9,6 +9,7 @@ from django.contrib.auth.models import Group, Permission
 from rest_framework import status
 from wagtail.models import GroupPagePermission, WorkflowState
 
+from semantichub_wagtail import views
 from semantichub_wagtail.models import IngestReceipt
 from tests.test_payload import make_payload
 from tests.testapp.models import ArticlePage
@@ -286,3 +287,82 @@ class TestProjectDefaultsDoNotLeakIn:
         )
         assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
         assert not ArticlePage.objects.exists()
+
+
+@pytest.mark.django_db
+class TestMalformedDeliveries:
+    @pytest.mark.parametrize("payload", [[], "text", 42, None])
+    def test_non_object_json_returns_400(self, api_client, article_index, payload):
+        response = api_client.post(
+            INBOUND_URL,
+            json.dumps(payload),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_invalid_json_returns_400(self, api_client, article_index):
+        response = api_client.post(
+            INBOUND_URL,
+            b"{not json",
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_malformed_cluster_returns_400(self, api_client, article_index):
+        response = post(api_client, payload=make_payload(clusters=["x"]))
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not ArticlePage.objects.exists()
+
+    def test_overlong_idempotency_key_returns_400(self, api_client, article_index):
+        response = post(api_client, idem_key="k" * 256)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert not ArticlePage.objects.exists()
+
+
+@pytest.mark.django_db
+class TestAtomicity:
+    def test_failure_after_page_creation_leaves_nothing_behind(
+        self, api_client, article_index, monkeypatch
+    ):
+        def explode(*args, **kwargs):
+            raise RuntimeError("workflow backend down")
+
+        monkeypatch.setattr(views, "apply_policy", explode)
+        with pytest.raises(RuntimeError):
+            post(api_client, idem_key="atomic-key")
+        assert not ArticlePage.objects.exists()
+        assert not IngestReceipt.objects.filter(idempotency_key="atomic-key").exists()
+
+    def test_retry_after_failure_creates_the_page(self, api_client, article_index, monkeypatch):
+        original = views.apply_policy
+
+        def explode(*args, **kwargs):
+            raise RuntimeError("workflow backend down")
+
+        monkeypatch.setattr(views, "apply_policy", explode)
+        with pytest.raises(RuntimeError):
+            post(api_client, idem_key="retry-key")
+        monkeypatch.setattr(views, "apply_policy", original)
+        response = post(api_client, idem_key="retry-key")
+        assert response.status_code == status.HTTP_201_CREATED
+        assert ArticlePage.objects.count() == 1
+
+    def test_lost_race_on_the_same_key_reports_the_winner(
+        self, api_client, article_index, monkeypatch
+    ):
+        winner = post(api_client, idem_key="race-key")
+        lookups = []
+        original = views.find_receipt
+
+        def stale_lookup(key):
+            lookups.append(key)
+            return None if len(lookups) == 1 else original(key)
+
+        monkeypatch.setattr(views, "find_receipt", stale_lookup)
+        response = post(api_client, idem_key="race-key")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["status"] == "duplicate"
+        assert response.data["page_id"] == winner.data["page_id"]
+        assert ArticlePage.objects.count() == 1

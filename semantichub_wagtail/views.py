@@ -17,6 +17,32 @@ from semantichub_wagtail.models import IngestDelivery, IngestPublication, Ingest
 from semantichub_wagtail.payload import InvalidPayload, parse_article
 from semantichub_wagtail.publish import apply_policy, ingest_user, resolve_mode
 
+MAX_KEY_LENGTH = 255
+
+
+def find_receipt(key):
+    return IngestReceipt.objects.select_related("page").filter(idempotency_key=key).first()
+
+
+def _page_response(state, page, outcome, http_status):
+    return Response(
+        {
+            "status": state,
+            "page_id": page.id,
+            "slug": page.slug,
+            "outcome": outcome,
+            "live": page.live,
+        },
+        status=http_status,
+    )
+
+
+def _duplicate(receipt):
+    return Response(
+        {"status": "duplicate", "page_id": receipt.page_id},
+        status=status.HTTP_200_OK,
+    )
+
 
 class InboundArticleView(APIView):
     authentication_classes = ()
@@ -30,6 +56,12 @@ class InboundArticleView(APIView):
                 {"detail": "invalid or missing credentials"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+        idem_key = request.headers.get("Idempotency-Key", "").strip()
+        if len(idem_key) > MAX_KEY_LENGTH:
+            return Response(
+                {"detail": f"Idempotency-Key is longer than {MAX_KEY_LENGTH} characters"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             article = parse_article(request.data)
         except InvalidPayload as error:
@@ -37,16 +69,10 @@ class InboundArticleView(APIView):
 
         adapter = get_adapter()
 
-        idem_key = request.headers.get("Idempotency-Key")
-        receipt = (
-            IngestReceipt.objects.filter(idempotency_key=idem_key).first() if idem_key else None
-        )
+        receipt = find_receipt(idem_key) if idem_key else None
         if receipt is not None:
             if receipt.page is None:
-                return Response(
-                    {"status": "duplicate", "page_id": receipt.page_id},
-                    status=status.HTTP_200_OK,
-                )
+                return _duplicate(receipt)
             return self._update(article, adapter, receipt.page.specific)
 
         parent = adapter.get_parent(article)
@@ -57,6 +83,20 @@ class InboundArticleView(APIView):
             )
 
         article.cover = fetch_image(article.data.get("image"), article.title)
+        try:
+            with transaction.atomic():
+                page, outcome = self._create(article, adapter, parent)
+                if idem_key:
+                    IngestReceipt.objects.create(idempotency_key=idem_key, page=page)
+        except IntegrityError:
+            receipt = find_receipt(idem_key) if idem_key else None
+            if receipt is None:
+                raise
+            return _duplicate(receipt)
+
+        return _page_response("created", page, outcome, status.HTTP_201_CREATED)
+
+    def _create(self, article, adapter, parent):
         page = adapter.build(article)
         page.slug = unique_slug(parent, article.slug_base)
         page.live = False
@@ -66,48 +106,20 @@ class InboundArticleView(APIView):
             adapter.apply_tags(page, article.tags)
             page.save()
         revision = page.save_revision()
-
         outcome = apply_policy(page, revision, resolve_mode(article), ingest_user())
-
-        if idem_key:
-            try:
-                with transaction.atomic():
-                    IngestReceipt.objects.create(idempotency_key=idem_key, page=page)
-            except IntegrityError:
-                pass
-
-        return Response(
-            {
-                "status": "created",
-                "page_id": page.id,
-                "slug": page.slug,
-                "outcome": outcome,
-                "live": page.live,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        return page, outcome
 
     def _update(self, article, adapter, page):
         article.cover = fetch_image(article.data.get("image"), article.title)
-        adapter.update(page, article)
-        if article.tags:
-            adapter.apply_tags(page, article.tags)
-        if not page.live:
-            page.save()
-        revision = page.save_revision()
-
-        outcome = apply_policy(page, revision, resolve_mode(article), ingest_user())
-
-        return Response(
-            {
-                "status": "updated",
-                "page_id": page.id,
-                "slug": page.slug,
-                "outcome": outcome,
-                "live": page.live,
-            },
-            status=status.HTTP_200_OK,
-        )
+        with transaction.atomic():
+            adapter.update(page, article)
+            if article.tags:
+                adapter.apply_tags(page, article.tags)
+            if not page.live:
+                page.save()
+            revision = page.save_revision()
+            outcome = apply_policy(page, revision, resolve_mode(article), ingest_user())
+        return _page_response("updated", page, outcome, status.HTTP_200_OK)
 
 
 class InboundPairView(APIView):
