@@ -19,16 +19,18 @@ that delivery for Wagtail sites.
 
 ## Features
 
-- Two `POST` endpoints: one for single articles, one for signed
-  language pairs (English and Polish versions of the same article).
+- One `POST` endpoint for both the v3 article payload and the v5 payload,
+  which carries a result identity, a revision and one or more languages.
+  Every language becomes its own page.
 - Shared bearer token and HMAC request signatures.
 - New pages are created unpublished and submitted to your Wagtail moderation
   workflow. Draft-only and direct-publish policies are available, and direct
   publish also needs an explicit Wagtail `publish` permission, so a webhook
   alone can never put content live.
-- Redeliveries are idempotent: the same `Idempotency-Key` updates the page
-  it created through a new revision instead of creating a duplicate, and
-  pair deliveries carry a revision number that can never go backwards.
+- Redeliveries are idempotent: a v3 redelivery with the same
+  `Idempotency-Key` updates the page it created through a new revision
+  instead of creating a duplicate, and a v5 delivery carries a revision
+  number that can never go backwards.
 - Markdown bodies are rendered with raw HTML escaped; HTML bodies are
   sanitised against an allowlist.
 - Cover images are downloaded into the Wagtail image library from public
@@ -120,37 +122,40 @@ class BlogArticleAdapter(ArticleAdapter):
 
 | Method | Required | Called with | Must |
 | --- | --- | --- | --- |
-| `get_parent(article)` | yes | every new delivery | return the parent page, or `None` to answer `500` so SemanticHub retries |
-| `build(article)` | yes | every new delivery | return an unsaved page instance; the package sets the slug, adds it under the parent and saves a revision |
-| `update(page, article)` | yes | a redelivery of a known `Idempotency-Key` | copy fields onto `page` without saving |
+| `get_parent(article)` | yes | every new page, once per language | return the parent page, or `None` to answer `500` so SemanticHub retries |
+| `build(article)` | yes | every new page, once per language | return an unsaved page instance; the package sets the slug, adds it under the parent and saves a revision |
+| `update(page, article)` | yes | a redelivery of a known `Idempotency-Key` (v3) or a newer revision of a known result (v5) | copy fields onto `page` without saving |
 | `apply_tags(page, tags)` | no | when the delivery has tags | attach the tag names to `page` |
 
 `article` is a `semantichub_wagtail.payload.Article`:
 
 | Attribute | Type | Source |
 | --- | --- | --- |
-| `title` | `str` | `title`, falling back to the topic name, at most 255 characters |
-| `lead` | `str` | `lead`, falling back to the topic description |
-| `body` | `str` | `llm_response` rendered to safe HTML |
+| `title` | `str` | v5: `locales.<lang>.title`; v3: `title`, falling back to the topic name; at most 255 characters |
+| `lead` | `str` | v5: `locales.<lang>.lead`; v3: `lead`, falling back to the topic description |
+| `body` | `str` | v5: `locales.<lang>.body_html` sanitised, falling back to `locales.<lang>.body` rendered from Markdown; v3: `llm_response` rendered to safe HTML |
+| `language` | `str \| None` | the language code of this page (v5); `None` for a v3 delivery |
+| `seo_description` | `str` | v5: `locales.<lang>.seo_description`, at most 255 characters; empty for v3 |
 | `tags` | `list[str]` | `tags`, falling back to the topic's semantic groups, at most 10 |
-| `publish_date` | `date` | `executed_at`, falling back to today |
+| `publish_date` | `date` | `published_at` or `executed_at`, falling back to today |
 | `publish_mode` | `str \| None` | `publish_mode` as sent |
-| `cover` | `Image \| None` | the downloaded `image.url` |
-| `slug_base` | `str` | slugified `url_slug` or topic name |
+| `cover` | `Image \| None` | the downloaded `image.url`, shared by every language of a delivery |
+| `slug_base` | `str` | v5: slugified `locales.<lang>.slug` or title; v3: slugified `url_slug` or topic name |
 | `cluster` | `dict` | the first entry of `clusters` |
 | `data` | `dict` | the raw payload |
 
-All adapter calls for one delivery run inside a single database transaction,
-so an exception leaves no half-created page behind.
+Use `article.language` in `get_parent` to put each language under its own
+index page. All adapter calls for one delivery run inside a single database
+transaction, so an exception leaves no half-created page behind.
 
-## Pair adapter
+## Publications and pages
 
-The pair endpoint hands both language versions to
-`SEMANTICHUB_INGEST_PAIR_ADAPTER`, a subclass of
-`semantichub_wagtail.adapters.PairAdapter` with one method:
+A v5 delivery is stored as an `IngestPublication` keyed by `result_id`. It
+holds the stored `revision`, the payload hash and one `IngestPublicationPage`
+per language:
 
 ```python
-from semantichub_wagtail.models import IngestPublication, IngestPublicationPage
+from semantichub_wagtail.models import IngestPublication
 
 publication = IngestPublication.objects.get(result_id=result_id)
 english_page = publication.page_for("en")  # None when that language has no page
@@ -158,29 +163,18 @@ for link in publication.pages.all():  # one IngestPublicationPage per language
     print(link.language_code, link.page_id)
 ```
 
-`publication` is the stored `IngestPublication` for the delivery's
-`result_id`, or `None` the first time. Return it (saved or not); the package
-then sets `result_id`, `revision`, `payload_hash` and `image_url` and saves it.
-The adapter decides how pages are published and may keep the downloaded
-cover in `publication.image`; compare `publication.image_url` with the
-incoming `data["image"]["url"]` to skip downloading the same cover twice.
-`semantichub_wagtail.images.fetch_image(data["image"], title)` applies the
-same download rules as the article endpoint. `upsert` runs inside the
-transaction that holds the row lock, so raising an exception rolls everything
-back and answers `500`.
-
 ## Settings
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
-| `SEMANTICHUB_INGEST_ADAPTER` | required for `inbound/` | Dotted path to your `ArticleAdapter` subclass. |
-| `SEMANTICHUB_INGEST_PAIR_ADAPTER` | required for `pair/` | Dotted path to your `PairAdapter` subclass. |
-| `SEMANTICHUB_INGEST_TOKEN` | `""` | Shared bearer token checked against `Authorization: Bearer <token>`. Article endpoint only. |
-| `SEMANTICHUB_INGEST_SECRET` | `""` | HMAC secret for signed requests. Required by the pair endpoint. |
+| `SEMANTICHUB_INGEST_ADAPTER` | required | Dotted path to your `ArticleAdapter` subclass. |
+| `SEMANTICHUB_INGEST_LANGUAGES` | `("pl", "en")` | Language codes accepted in a v5 delivery. A language outside this list answers `400`. |
+| `SEMANTICHUB_INGEST_TOKEN` | `""` | Shared bearer token checked against `Authorization: Bearer <token>`. |
+| `SEMANTICHUB_INGEST_SECRET` | `""` | HMAC secret for signed requests. |
 | `SEMANTICHUB_INGEST_PUBLISH_MODE` | `"moderation"` | Default for accepted articles: `moderation`, `draft` or `publish`. |
 
 With neither the token nor the secret set, every request is rejected. When
-both are set, either one authorizes an article delivery. Use long random
+both are set, either one authorizes a delivery. Use long random
 values for both, for example `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
 
 ## Publish policy
@@ -198,16 +192,34 @@ otherwise from `SEMANTICHUB_INGEST_PUBLISH_MODE`.
   Wagtail admin to opt in; without them the delivery falls back to
   moderation.
 
+Every page goes through the policy, in every language of a v5 delivery.
 Redeliveries of a page that is already live never touch the published
 version; the change lands in a new revision that goes through the same
 policy.
 
-## Endpoints
+## Endpoint
 
 ### `POST <prefix>/inbound/`
 
-Accepts the SemanticHub article payload (versions 2 and 3). Authorized by
-the bearer token or an HMAC signature.
+Accepts every SemanticHub delivery, authorized by the bearer token or an
+HMAC signature. The payload decides the path:
+
+- **Without `result_id` (v2 and v3).** One page per delivery, keyed by the
+  `Idempotency-Key` header. A known key updates its page; a delivery without
+  the header always creates a new page.
+- **With `result_id` (v5).** One publication per `result_id`. The request
+  needs an `X-SH-Delivery` header, or `Idempotency-Key` as a fallback, of at
+  most 255 characters. `locales` holds one to N languages, each from
+  `SEMANTICHUB_INGEST_LANGUAGES` (by default `pl` and `en`). The source
+  language comes from `source_lang`. Each language gets its own page, and
+  each page goes through the publish policy. A delivery without `locales`
+  creates one page from `llm_response` under the source language. A page
+  created before v5 for the same result is adopted instead of duplicated.
+
+The receiver never requires a language pair; whether both languages are sent
+is the sender's decision.
+
+Responses for v2 and v3:
 
 | Status | Body | When |
 | --- | --- | --- |
@@ -219,7 +231,21 @@ the bearer token or an HMAC signature.
 | `415` | `{"detail"}` | the body is not `application/json` |
 | `500` | `{"detail"}` | the adapter returned no parent page |
 
-`outcome` is one of `moderation`, `draft` or `published`.
+Responses for v5:
+
+| Status | Body | When |
+| --- | --- | --- |
+| `201` | `{"status": "published", "result_id", "revision", "pages"}` | the first delivery of a result |
+| `200` | `{"status": "updated", "result_id", "revision", "pages"}` | a newer revision of a known result |
+| `200` | `{"status": "duplicate", "result_id", "revision"}` | a replayed delivery id, or the stored revision redelivered with identical bytes |
+| `400` | `{"detail"}` | invalid payload, a language outside `SEMANTICHUB_INGEST_LANGUAGES`, `revision` outside 1 to 2^31-1, or a missing or overlong delivery id |
+| `401` | `{"detail"}` | missing or invalid credentials |
+| `409` | `{"detail", "result_id", "revision"}` | an older revision than the stored one, the stored revision with different content, or a delivery id reused with a different payload; `revision` is the stored one |
+| `500` | `{"detail"}` | the adapter returned no parent page for one of the languages; nothing is saved |
+
+`pages` maps each language code to `{"page_id", "slug", "outcome", "live"}`.
+`outcome` is one of `moderation`, `draft` or `published`. SemanticHub bumps
+`revision` on a 409 that carries `revision` and retries.
 
 Payload fields read by the package:
 
@@ -230,40 +256,14 @@ Payload fields read by the package:
 | `clusters` | non-empty list; the first entry provides `name`, `description`, `url_slug` and `semantic_groups` |
 | `title`, `lead` | optional, fall back to the topic |
 | `tags` | optional list of strings |
-| `executed_at` | optional ISO 8601 timestamp |
+| `executed_at`, `published_at` | optional ISO 8601 timestamps |
 | `publish_mode` | optional, `moderation`, `draft` or `publish` |
 | `image.url` | optional HTTPS cover URL |
-
-### `POST <prefix>/pair/`
-
-Accepts a signed delivery carrying both language versions of one result.
-Only HMAC signatures authorize it; the bearer token never does.
-
-```json
-{
-  "result_id": "6f1b0680-0f1c-4a1b-9a5c-1c2d3e4f5a6b",
-  "revision": 2,
-  "published_at": "2026-09-20T10:00:00+00:00",
-  "image": {"url": "https://cdn.example.com/cover.jpg", "alt": "Cover"},
-  "locales": {
-    "en": {"title": "...", "slug": "...", "lead": "...", "body": "...", "seo_description": "..."},
-    "pl": {"title": "...", "slug": "...", "lead": "...", "body": "...", "seo_description": "..."}
-  }
-}
-```
-
-The package validates `result_id` (a UUID), `revision` (an integer from 1),
-`locales.en` and `locales.pl` (objects) and `image` (an object, optional).
-Everything else is passed to the adapter untouched.
-
-| Status | Body | When |
-| --- | --- | --- |
-| `201` | `{"status": "published", "result_id", "revision"}` | the adapter ran for a new result or a newer revision |
-| `200` | `{"status": "duplicate", "result_id"}` | a replayed `X-SH-Delivery`, or the current revision redelivered with identical bytes |
-| `400` | `{"detail"}` | invalid payload, or a missing or overlong `X-SH-Delivery` header |
-| `401` | `{"detail"}` | missing or invalid signature |
-| `409` | `{"detail", "revision"}` | an older revision than the stored one, or the stored revision with different content; `revision` is the stored one |
-| `409` | `{"detail"}` | an `X-SH-Delivery` id reused with a different payload |
+| `result_id` | v5: UUID of the result chain; its presence selects the v5 path |
+| `revision` | v5: integer from 1 to 2^31-1, default 1 |
+| `source_lang` | v5: source language code (`pair_source_lang` is accepted as an alias) |
+| `locales` | v5: optional object keyed by language code; each entry needs `title` and may carry `slug`, `lead`, `body`, `body_html` and `seo_description` |
+| `workflow_execution` | v5: id of the delivered result, used to adopt a page created before v5 |
 
 ## Security model
 
@@ -273,11 +273,10 @@ Everything else is passed to the adapter untouched.
   must be within 5 minutes of the server clock. All comparisons are
   constant-time.
 - **Replays.** A signed request can be replayed inside the 5 minute window.
-  The pair endpoint absorbs that through `X-SH-Delivery` and the stored
-  payload hash per revision. On the article endpoint a replay with the same
-  `Idempotency-Key` only saves another revision of the same page, while a
-  delivery without that header always creates a new page, so its replay adds
-  a duplicate draft.
+  A v5 delivery absorbs that through its delivery id and the stored payload
+  hash per revision. A v3 replay with the same `Idempotency-Key` only saves
+  another revision of the same page, while a v3 delivery without that header
+  always creates a new page, so its replay adds a duplicate draft.
 - **Isolation from project settings.** The views use their own
   authentication, JSON-only parsing and no throttling, so project-wide
   `REST_FRAMEWORK` defaults (session or JWT authentication, form parsers,
