@@ -115,3 +115,36 @@ class TestBothConfigured:
         timestamp, digest = _sign(BODY)
         request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest})
         assert is_authorized(request) is True
+
+
+class TestMalformedHeaders:
+    def test_non_ascii_bearer_is_rejected(self, rf, settings):
+        settings.SEMANTICHUB_INGEST_TOKEN = TOKEN
+        request = _request(rf, {"Authorization": "Bearer tést-token"})
+        assert is_authorized(request) is False
+
+    def test_non_ascii_signature_is_rejected(self, rf, settings):
+        settings.SEMANTICHUB_INGEST_SECRET = SECRET
+        timestamp, _ = _sign(BODY)
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": "é" * 64})
+        assert is_authorized(request) is False
+
+    def test_non_ascii_secret_signs_utf8(self, rf, settings):
+        settings.SEMANTICHUB_INGEST_SECRET = "sécret"
+        timestamp, digest = _sign(BODY, secret="sécret")
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest})
+        assert is_authorized(request) is True
+
+    def test_timestamp_from_the_future_is_rejected(self, rf, settings):
+        settings.SEMANTICHUB_INGEST_SECRET = SECRET
+        timestamp, digest = _sign(BODY, timestamp=int(time.time()) + 3600)
+        request = _request(rf, {"X-SH-Timestamp": timestamp, "X-SH-Signature": digest})
+        assert is_authorized(request) is False
+
+    def test_non_numeric_timestamp_variants_are_rejected(self, rf, settings):
+        settings.SEMANTICHUB_INGEST_SECRET = SECRET
+        now = int(time.time())
+        for value in (f"{now:_}", f"+{now}", "\u0661" * 10):
+            _, digest = _sign(BODY, timestamp=value)
+            request = _request(rf, {"X-SH-Timestamp": value, "X-SH-Signature": digest})
+            assert is_authorized(request) is False
