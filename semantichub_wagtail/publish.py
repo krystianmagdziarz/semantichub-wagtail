@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 
 PUBLISH_MODES = ("moderation", "draft", "publish")
+INGEST_USERNAME = "semantichub"
 
 
 def resolve_mode(article):
@@ -16,7 +17,7 @@ def resolve_mode(article):
 def ingest_user():
     User = get_user_model()
     user, _created = User.objects.get_or_create(
-        username="semantichub",
+        **{User.USERNAME_FIELD: INGEST_USERNAME},
         defaults={"is_active": False, "password": make_password(None)},
     )
     return user

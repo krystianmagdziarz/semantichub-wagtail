@@ -11,6 +11,7 @@ from wagtail.models import GroupPagePermission, WorkflowState
 
 from semantichub_wagtail import views
 from semantichub_wagtail.models import IngestReceipt
+from semantichub_wagtail.publish import ingest_user
 from tests.test_payload import make_payload
 from tests.testapp.models import ArticlePage
 
@@ -255,6 +256,13 @@ class TestIngestUser:
         post(api_client)
         page = ArticlePage.objects.get(slug="passive-income")
         assert page.current_workflow_state.requested_by.username == "semantichub"
+
+    def test_account_uses_the_user_model_username_field(self, monkeypatch):
+        User = get_user_model()
+        monkeypatch.setattr(User, "USERNAME_FIELD", "email")
+        user = ingest_user()
+        assert user.email == "semantichub"
+        assert ingest_user().pk == user.pk
 
 
 @pytest.mark.django_db
