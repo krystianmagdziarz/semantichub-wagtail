@@ -148,3 +148,8 @@ class TestMalformedHeaders:
             _, digest = _sign(BODY, timestamp=value)
             request = _request(rf, {"X-SH-Timestamp": value, "X-SH-Signature": digest})
             assert is_authorized(request) is False
+
+    def test_absurdly_long_timestamp_is_rejected(self, rf, settings):
+        settings.SEMANTICHUB_INGEST_SECRET = SECRET
+        request = _request(rf, {"X-SH-Timestamp": "9" * 5000, "X-SH-Signature": "0" * 64})
+        assert is_authorized(request) is False

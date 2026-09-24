@@ -5,6 +5,7 @@ import time
 from django.conf import settings
 
 MAX_CLOCK_SKEW_SECONDS = 300
+MAX_TIMESTAMP_DIGITS = 12
 
 
 def _equal(received, expected):
@@ -24,7 +25,7 @@ def _signature_authorized(request, secret):
     signature = request.headers.get("X-SH-Signature", "")
     if not timestamp or not signature:
         return False
-    if not (timestamp.isascii() and timestamp.isdigit()):
+    if len(timestamp) > MAX_TIMESTAMP_DIGITS or not (timestamp.isascii() and timestamp.isdigit()):
         return False
     if abs(time.time() - int(timestamp)) > MAX_CLOCK_SKEW_SECONDS:
         return False
