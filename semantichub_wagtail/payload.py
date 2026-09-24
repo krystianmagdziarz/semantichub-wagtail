@@ -9,6 +9,7 @@ from semantichub_wagtail import content
 from semantichub_wagtail.settings import allowed_languages
 
 MAX_SLUG_BASE_LENGTH = 200
+MAX_REVISION = 2**31 - 1
 
 SUPPORTED_VERSIONS = (None, 3, 5)
 
@@ -76,6 +77,8 @@ def parse_identity(data):
         raise InvalidPayload("revision must be an integer")
     if revision < 1:
         raise InvalidPayload("revision must be >= 1")
+    if revision > MAX_REVISION:
+        raise InvalidPayload(f"revision must be <= {MAX_REVISION}")
     locales = data.get("locales")
     if locales is None:
         locales = {}

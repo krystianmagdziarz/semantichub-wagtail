@@ -300,6 +300,12 @@ def test_revision_must_be_integer(revision):
         parse_identity(make_v5_payload(revision=revision))
 
 
+def test_revision_upper_bound():
+    assert parse_identity(make_v5_payload(revision=2**31 - 1)).revision == 2**31 - 1
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_v5_payload(revision=2**31))
+
+
 def test_seo_description_capped():
     data = make_v5_payload()
     data["locales"]["pl"]["seo_description"] = "x" * 400

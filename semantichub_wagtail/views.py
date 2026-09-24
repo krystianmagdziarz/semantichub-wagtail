@@ -218,7 +218,7 @@ class InboundArticleView(APIView):
             publication = IngestPublication.objects.create(
                 result_id=identity.result_id, revision=identity.revision, payload_hash=digest
             )
-            self._adopt_legacy_page(publication, identity, source_lang)
+            self._adopt_legacy_page(publication, data, identity, source_lang)
 
         image_url = _image_url(data)
         if image_url and image_url == publication.image_url and publication.image_id:
@@ -271,11 +271,23 @@ class InboundArticleView(APIView):
             status=status.HTTP_201_CREATED if created_now else status.HTTP_200_OK,
         )
 
-    def _adopt_legacy_page(self, publication, identity, source_lang):
-        """A page created before v5 with Idempotency-Key = result id becomes
-        the source-language page of the new publication instead of a duplicate."""
-        receipt = find_receipt(str(identity.result_id))
-        if receipt is not None and receipt.page_id:
+    def _adopt_legacy_page(self, publication, data, identity, source_lang):
+        """A page created before v5 becomes the source-language page of the new
+        publication instead of a duplicate. The old Idempotency-Key was the id
+        of the delivered result, which v5 sends as workflow_execution; the
+        chain root (result_id) is the fallback."""
+        keys = [
+            key
+            for key in (data.get("workflow_execution"), str(identity.result_id))
+            if isinstance(key, str) and key.strip()
+        ]
+        receipt = None
+        for key in keys:
+            found = find_receipt(key.strip())
+            if found is not None and found.page_id:
+                receipt = found
+                break
+        if receipt is not None:
             IngestPublicationPage.objects.get_or_create(
                 publication=publication,
                 language_code=source_lang,

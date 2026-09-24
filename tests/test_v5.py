@@ -6,6 +6,7 @@ import time
 import pytest
 from rest_framework import status
 
+from semantichub_wagtail import views
 from semantichub_wagtail.models import (
     IngestDelivery,
     IngestPublication,
@@ -199,6 +200,56 @@ class TestV5Delivery:
         assert r.status_code == 201 and r.json()["pages"]["pl"]["page_id"] == page_id
         assert ArticlePage.objects.count() == 1
         assert ArticlePage.objects.get().title == "Tytuł PL"
+
+    def test_legacy_page_of_a_later_revision_is_adopted_by_workflow_execution(
+        self, api_client, article_index
+    ):
+        revision_2_result = "0b9e2f55-3c1d-4f0e-8a77-2d4c6b8e9f10"
+        root = api_client.post(
+            INBOUND_URL,
+            make_payload(title="Root page"),
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+            HTTP_IDEMPOTENCY_KEY=RESULT_ID,
+        )
+        legacy = api_client.post(
+            INBOUND_URL,
+            make_payload(title="Revision 2 page"),
+            format="json",
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+            HTTP_IDEMPOTENCY_KEY=revision_2_result,
+        )
+        assert root.status_code == 201 and legacy.status_code == 201
+        page_id = legacy.json()["page_id"]
+        data = make_v5_payload(revision=2, workflow_execution=revision_2_result)
+        data["locales"] = {"pl": data["locales"]["pl"]}
+        r = post_v5(api_client, data)
+        assert r.status_code == 201, r.content
+        assert r.json()["pages"]["pl"]["page_id"] == page_id
+        assert ArticlePage.objects.count() == 2
+
+    def test_lost_insert_race_retries_and_answers_duplicate(
+        self, api_client, article_index, article_index_en, monkeypatch
+    ):
+        body = json.dumps(make_v5_payload()).encode()
+        assert post_v5(api_client, body=body).status_code == 201
+        real = views.find_publication
+        calls = []
+
+        def blind_first_call(result_id):
+            calls.append(result_id)
+            return None if len(calls) == 1 else real(result_id)
+
+        monkeypatch.setattr(views, "find_publication", blind_first_call)
+        r = post_v5(api_client, body=body, delivery_id="dl-2")
+        assert r.status_code == 200 and r.json()["status"] == "duplicate", r.content
+        assert len(calls) == 2
+        assert IngestPublication.objects.count() == 1
+        assert ArticlePage.objects.count() == 2
+
+    def test_revision_above_the_integer_limit_is_400(self, api_client, article_index):
+        r = post_v5(api_client, make_v5_payload(revision=2**31))
+        assert r.status_code == 400
 
     def test_missing_delivery_and_idempotency_headers_is_400(self, api_client, article_index):
         r = post_v5(api_client, delivery_id=None)
