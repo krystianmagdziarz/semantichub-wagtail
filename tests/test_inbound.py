@@ -254,3 +254,35 @@ class TestIngestUser:
         post(api_client)
         page = ArticlePage.objects.get(slug="passive-income")
         assert page.current_workflow_state.requested_by.username == "semantichub"
+
+
+@pytest.mark.django_db
+class TestProjectDefaultsDoNotLeakIn:
+    def test_unrelated_authorization_scheme_does_not_block_signed_delivery(
+        self, api_client, article_index, settings
+    ):
+        settings.SEMANTICHUB_INGEST_TOKEN = ""
+        settings.SEMANTICHUB_INGEST_SECRET = "hmac-secret"
+        body = json.dumps(make_payload()).encode()
+        timestamp = str(int(time.time()))
+        digest = hmac.new(
+            b"hmac-secret", timestamp.encode() + b"." + body, hashlib.sha256
+        ).hexdigest()
+        response = api_client.post(
+            INBOUND_URL,
+            body,
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Basic !!not-base64!!",
+            HTTP_X_SH_TIMESTAMP=timestamp,
+            HTTP_X_SH_SIGNATURE=digest,
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+
+    def test_form_encoded_body_is_refused(self, api_client, article_index):
+        response = api_client.post(
+            INBOUND_URL,
+            {"mode": "article", "clusters": "x", "llm_response": "text"},
+            HTTP_AUTHORIZATION=f"Bearer {TOKEN}",
+        )
+        assert response.status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+        assert not ArticlePage.objects.exists()

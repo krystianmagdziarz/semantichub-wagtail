@@ -175,3 +175,21 @@ class TestPairDelivery:
         response = post_pair(api_client, changed, delivery_id="dl-2")
         assert response.status_code == status.HTTP_409_CONFLICT
         assert response.data["revision"] == 1
+
+
+@pytest.mark.django_db
+class TestPairProjectDefaults:
+    def test_unrelated_authorization_scheme_is_ignored(self, api_client, article_index):
+        body = json.dumps(make_pair_payload()).encode()
+        timestamp = str(int(time.time()))
+        digest = hmac.new(SECRET.encode(), timestamp.encode() + b"." + body, hashlib.sha256)
+        response = api_client.post(
+            PAIR_URL,
+            body,
+            content_type="application/json",
+            HTTP_AUTHORIZATION="Basic !!not-base64!!",
+            HTTP_X_SH_TIMESTAMP=timestamp,
+            HTTP_X_SH_SIGNATURE=digest.hexdigest(),
+            HTTP_X_SH_DELIVERY="dl-basic",
+        )
+        assert response.status_code == status.HTTP_201_CREATED

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from django.db import IntegrityError, transaction
 from rest_framework import status
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,7 +19,10 @@ from semantichub_wagtail.publish import apply_policy, ingest_user, resolve_mode
 
 
 class InboundArticleView(APIView):
+    authentication_classes = ()
     permission_classes = (AllowAny,)
+    parser_classes = (JSONParser,)
+    throttle_classes = ()
 
     def post(self, request):
         if not is_authorized(request):
@@ -107,7 +111,10 @@ class InboundArticleView(APIView):
 
 
 class InboundPairView(APIView):
+    authentication_classes = ()
     permission_classes = (AllowAny,)
+    parser_classes = (JSONParser,)
+    throttle_classes = ()
 
     def post(self, request):
         body = request.body
