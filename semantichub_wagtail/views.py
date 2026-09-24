@@ -167,13 +167,16 @@ class InboundPairView(APIView):
             )
             if publication is not None and revision < publication.revision:
                 return Response(
-                    {"detail": "stale revision"},
+                    {"detail": "stale revision", "revision": publication.revision},
                     status=status.HTTP_409_CONFLICT,
                 )
             if publication is not None and revision == publication.revision:
                 if publication.payload_hash != digest:
                     return Response(
-                        {"detail": "revision reused with a different payload"},
+                        {
+                            "detail": "revision reused with a different payload",
+                            "revision": publication.revision,
+                        },
                         status=status.HTTP_409_CONFLICT,
                     )
                 IngestDelivery.objects.create(

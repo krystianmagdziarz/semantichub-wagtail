@@ -158,6 +158,7 @@ class TestPairDelivery:
         post_pair(api_client, make_pair_payload(revision=2), delivery_id="dl-1")
         response = post_pair(api_client, make_pair_payload(revision=1), delivery_id="dl-2")
         assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.data["revision"] == 2
 
     def test_same_revision_redelivery_is_a_duplicate(self, api_client, article_index):
         post_pair(api_client, delivery_id="dl-1")
@@ -173,3 +174,4 @@ class TestPairDelivery:
         changed["locales"]["pl"]["title"] = "Inny tytul"
         response = post_pair(api_client, changed, delivery_id="dl-2")
         assert response.status_code == status.HTTP_409_CONFLICT
+        assert response.data["revision"] == 1
