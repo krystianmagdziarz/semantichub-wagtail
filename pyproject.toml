@@ -1,19 +1,36 @@
 [project]
 name = "semantichub-wagtail"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Wagtail integration for SemanticHub: receives generated articles over webhooks and turns them into pages awaiting editorial approval."
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Krystian Magdziarz" }]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
+keywords = ["wagtail", "django", "webhook", "cms", "semantichub"]
 classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
     "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
     "Framework :: Wagtail",
+    "Framework :: Wagtail :: 8",
     "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content :: Content Management System",
 ]
 dependencies = [
-    "wagtail>=7.0",
+    "wagtail>=8.0",
     "djangorestframework>=3.15",
     "httpx>=0.27",
     "markdown-it-py>=3.0",
@@ -21,20 +38,41 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/krystianmagdziarz/semantichub-wagtail"
+Source = "https://github.com/krystianmagdziarz/semantichub-wagtail"
 Issues = "https://github.com/krystianmagdziarz/semantichub-wagtail/issues"
+Changelog = "https://github.com/krystianmagdziarz/semantichub-wagtail/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-django>=4.9",
+    "ruff>=0.6",
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "semantichub_wagtail/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["semantichub_wagtail"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/semantichub_wagtail",
+    "/tests",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/README.md",
+    "/pyproject.toml",
+]
+exclude = [
+    "__pycache__",
+    "*.py[cod]",
+    "*.sqlite3",
+]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
