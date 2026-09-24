@@ -1,5 +1,6 @@
 import re
 
+import nh3
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from markdown_it import MarkdownIt
@@ -21,7 +22,7 @@ def render_body(llm_response):
     if not text.strip():
         return ""
     if _looks_like_html(text):
-        return text
+        return nh3.clean(text)
     return _MARKDOWN.render(text)
 
 

@@ -41,6 +41,29 @@ class TestRenderBody:
         body = "<h2>Intro</h2><p>Generated article.</p>"
         assert render_body(body) == body
 
+    def test_script_in_html_body_is_removed(self):
+        html = render_body("<p>Intro</p><script>alert(1)</script>")
+        assert "<script" not in html
+        assert "alert(1)" not in html
+        assert "<p>Intro</p>" in html
+
+    def test_event_handlers_in_html_body_are_removed(self):
+        html = render_body('<p onclick="steal()">Intro</p><img src="x.png" onerror="steal()">')
+        assert "onclick" not in html
+        assert "onerror" not in html
+
+    def test_javascript_links_in_html_body_are_removed(self):
+        html = render_body('<p>See <a href="javascript:alert(1)">this</a></p>')
+        assert "javascript:" not in html
+
+    def test_iframes_in_html_body_are_removed(self):
+        html = render_body('<p>Intro</p><iframe src="https://example.com"></iframe>')
+        assert "<iframe" not in html
+
+    def test_javascript_links_in_markdown_are_not_rendered(self):
+        html = render_body("[click](javascript:alert(1))")
+        assert 'href="javascript:' not in html
+
     def test_html_with_leading_whitespace_passes_through(self):
         body = "\n  <p>Generated article.</p>"
         assert render_body(body) == body
