@@ -114,3 +114,51 @@ class TestExampleAdapter:
     def test_get_parent_returns_index(self, article_index):
         adapter = get_adapter()
         assert adapter.get_parent(parse_article(make_payload())).pk == article_index.pk
+
+
+class TestHostilePayloads:
+    @pytest.mark.parametrize(
+        "clusters",
+        ["not-a-list", {"name": "x"}, ["not-a-dict"], [None]],
+    )
+    def test_malformed_clusters_are_invalid(self, clusters):
+        with pytest.raises(InvalidPayload):
+            parse_article(make_payload(clusters=clusters))
+
+    @pytest.mark.parametrize("body", [123, ["## a"], {"text": "a"}])
+    def test_non_string_body_is_invalid(self, body):
+        with pytest.raises(InvalidPayload):
+            parse_article(make_payload(llm_response=body))
+
+    def test_non_string_title_falls_back_to_cluster_name(self):
+        article = parse_article(make_payload(title=123))
+        assert article.title == "How to build passive income"
+
+    def test_non_string_lead_falls_back_to_cluster_description(self):
+        article = parse_article(make_payload(lead={"x": 1}))
+        assert article.lead == "A practical guide."
+
+    @pytest.mark.parametrize("executed_at", ["2026-13-45T10:00:00+00:00", 1700000000, ["x"]])
+    def test_unusable_executed_at_falls_back_to_today(self, executed_at):
+        article = parse_article(make_payload(executed_at=executed_at))
+        assert article.publish_date == date.today()
+
+    def test_url_slug_is_sanitised(self):
+        payload = make_payload()
+        payload["clusters"][0]["url_slug"] = "Passive Income/../<b>2026</b>"
+        assert parse_article(payload).slug_base == "passive-incomeb2026b"
+
+    def test_long_url_slug_is_trimmed(self):
+        payload = make_payload()
+        payload["clusters"][0]["url_slug"] = "a" * 400
+        assert len(parse_article(payload).slug_base) <= 200
+
+    def test_non_string_cluster_name_does_not_break_slug(self):
+        payload = make_payload()
+        del payload["clusters"][0]["url_slug"]
+        payload["clusters"][0]["name"] = 42
+        assert parse_article(payload).slug_base == ""
+
+    def test_non_string_tags_are_skipped(self):
+        article = parse_article(make_payload(tags=["seo", {"x": 1}, None, 7, "google"]))
+        assert article.tags == ["seo", "google"]

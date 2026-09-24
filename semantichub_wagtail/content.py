@@ -25,10 +25,12 @@ def render_body(llm_response):
     return _MARKDOWN.render(text)
 
 
+def text(value):
+    return value.strip() if isinstance(value, str) else ""
+
+
 def article_title(payload, cluster):
-    title = (payload.get("title") or "").strip()
-    if not title:
-        title = (cluster.get("name") or "").strip()
+    title = text(payload.get("title")) or text(cluster.get("name"))
     return title[:255]
 
 
@@ -38,9 +40,9 @@ def excerpt(payload, cluster):
         cluster.get("description"),
         cluster.get("meta_description"),
     ):
-        text = (value or "").strip()
-        if text:
-            return text
+        stripped = text(value)
+        if stripped:
+            return stripped
     return ""
 
 
@@ -50,18 +52,20 @@ def tags(payload, cluster):
         groups = cluster.get("semantic_groups")
         raw = list(groups) if isinstance(groups, dict) else []
     out = []
-    for tag in raw:
-        tag = str(tag).strip()[:100]
+    for value in raw:
+        tag = text(value)[:100]
         if tag and tag not in out:
             out.append(tag)
     return out[:10]
 
 
 def publish_date(executed_at):
-    if executed_at:
-        dt = parse_datetime(executed_at)
-        if dt is not None:
-            return dt.date()
+    try:
+        parsed = parse_datetime(text(executed_at))
+    except ValueError:
+        parsed = None
+    if parsed is not None:
+        return parsed.date()
     return timezone.now().date()
 
 
