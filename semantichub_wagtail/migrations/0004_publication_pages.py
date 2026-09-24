@@ -1,3 +1,5 @@
+"""Reversing this migration restores the en_page/pl_page columns empty; existing page links are not copied back."""
+
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models

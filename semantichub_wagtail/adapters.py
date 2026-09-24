@@ -17,11 +17,6 @@ class ArticleAdapter:
         pass
 
 
-class PairAdapter:
-    def upsert(self, publication, data, revision):
-        raise NotImplementedError
-
-
 def _load(setting_name, base_hint):
     dotted_path = getattr(settings, setting_name, "") or ""
     if not dotted_path:
@@ -31,7 +26,3 @@ def _load(setting_name, base_hint):
 
 def get_adapter():
     return _load("SEMANTICHUB_INGEST_ADAPTER", "ArticleAdapter")
-
-
-def get_pair_adapter():
-    return _load("SEMANTICHUB_INGEST_PAIR_ADAPTER", "PairAdapter")

@@ -150,16 +150,12 @@ The pair endpoint hands both language versions to
 `semantichub_wagtail.adapters.PairAdapter` with one method:
 
 ```python
-from semantichub_wagtail.adapters import PairAdapter
-from semantichub_wagtail.models import IngestPublication
+from semantichub_wagtail.models import IngestPublication, IngestPublicationPage
 
-
-class BlogPairAdapter(PairAdapter):
-    def upsert(self, publication, data, revision):
-        publication = publication or IngestPublication()
-        publication.en_page = ...  # create or update from data["locales"]["en"]
-        publication.pl_page = ...  # create or update from data["locales"]["pl"]
-        return publication
+publication = IngestPublication.objects.get(result_id=result_id)
+english_page = publication.page_for("en")  # None when that language has no page
+for link in publication.pages.all():  # one IngestPublicationPage per language
+    print(link.language_code, link.page_id)
 ```
 
 `publication` is the stored `IngestPublication` for the delivery's

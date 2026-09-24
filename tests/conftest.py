@@ -15,6 +15,12 @@ def article_index(db):
 
 
 @pytest.fixture
+def article_index_en(article_index):
+    parent = article_index.get_parent()
+    return parent.add_child(instance=ArticleIndexPage(title="Articles EN", slug="articles-en"))
+
+
+@pytest.fixture
 def api_client():
     return APIClient()
 

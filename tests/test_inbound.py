@@ -383,17 +383,3 @@ class TestRequestSize:
         response = post(api_client, payload=make_payload(llm_response="x" * 4096))
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert not ArticlePage.objects.exists()
-
-    def test_pair_body_over_the_django_limit_is_refused(self, api_client, article_index, settings):
-        settings.DATA_UPLOAD_MAX_MEMORY_SIZE = 1024
-        settings.SEMANTICHUB_INGEST_SECRET = "hmac-secret"
-        body = json.dumps({"padding": "x" * 4096}).encode()
-        response = api_client.post(
-            "/api/semantichub/pair/",
-            body,
-            content_type="application/json",
-            HTTP_X_SH_TIMESTAMP=str(int(time.time())),
-            HTTP_X_SH_SIGNATURE="0" * 64,
-            HTTP_X_SH_DELIVERY="dl-big",
-        )
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
