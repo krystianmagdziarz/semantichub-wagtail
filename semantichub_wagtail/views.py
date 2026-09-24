@@ -21,6 +21,10 @@ MAX_KEY_LENGTH = 255
 MAX_REVISION = 2**31 - 1
 
 
+def find_publication(result_id):
+    return IngestPublication.objects.select_for_update().filter(result_id=result_id).first()
+
+
 def find_receipt(key):
     return IngestReceipt.objects.select_related("page").filter(idempotency_key=key).first()
 
@@ -179,61 +183,66 @@ class InboundPairView(APIView):
             )
         digest = hashlib.sha256(body).hexdigest()
 
-        with transaction.atomic():
-            delivery = (
-                IngestDelivery.objects.select_for_update().filter(delivery_id=delivery_id).first()
-            )
-            if delivery is not None:
-                if delivery.payload_hash != digest:
-                    return Response(
-                        {"detail": "delivery ID reused with a different payload"},
-                        status=status.HTTP_409_CONFLICT,
-                    )
-                return Response(
-                    {"status": "duplicate", "result_id": str(result_id)},
-                    status=status.HTTP_200_OK,
-                )
+        try:
+            with transaction.atomic():
+                return self._deliver(data, result_id, revision, delivery_id, digest)
+        except IntegrityError:
+            with transaction.atomic():
+                return self._deliver(data, result_id, revision, delivery_id, digest)
 
-            publication = (
-                IngestPublication.objects.select_for_update().filter(result_id=result_id).first()
-            )
-            if publication is not None and revision < publication.revision:
+    def _deliver(self, data, result_id, revision, delivery_id, digest):
+        delivery = (
+            IngestDelivery.objects.select_for_update().filter(delivery_id=delivery_id).first()
+        )
+        if delivery is not None:
+            if delivery.payload_hash != digest:
                 return Response(
-                    {"detail": "stale revision", "revision": publication.revision},
+                    {"detail": "delivery ID reused with a different payload"},
                     status=status.HTTP_409_CONFLICT,
                 )
-            if publication is not None and revision == publication.revision:
-                if publication.payload_hash != digest:
-                    return Response(
-                        {
-                            "detail": "revision reused with a different payload",
-                            "revision": publication.revision,
-                        },
-                        status=status.HTTP_409_CONFLICT,
-                    )
-                IngestDelivery.objects.create(
-                    delivery_id=delivery_id,
-                    payload_hash=digest,
-                    publication=publication,
-                )
-                return Response(
-                    {"status": "duplicate", "result_id": str(result_id)},
-                    status=status.HTTP_200_OK,
-                )
-
-            publication = get_pair_adapter().upsert(
-                publication=publication, data=data, revision=revision
+            return Response(
+                {"status": "duplicate", "result_id": str(result_id)},
+                status=status.HTTP_200_OK,
             )
-            publication.result_id = result_id
-            publication.revision = revision
-            publication.payload_hash = digest
-            publication.image_url = (data.get("image") or {}).get("url") or ""
-            publication.save()
+
+        publication = find_publication(result_id)
+        if publication is not None and revision < publication.revision:
+            return Response(
+                {"detail": "stale revision", "revision": publication.revision},
+                status=status.HTTP_409_CONFLICT,
+            )
+        if publication is not None and revision == publication.revision:
+            if publication.payload_hash != digest:
+                return Response(
+                    {
+                        "detail": "revision reused with a different payload",
+                        "revision": publication.revision,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
             IngestDelivery.objects.create(
                 delivery_id=delivery_id,
                 payload_hash=digest,
                 publication=publication,
             )
+            return Response(
+                {"status": "duplicate", "result_id": str(result_id)},
+                status=status.HTTP_200_OK,
+            )
+
+        publication = get_pair_adapter().upsert(
+            publication=publication, data=data, revision=revision
+        )
+        publication.result_id = result_id
+        publication.revision = revision
+        publication.payload_hash = digest
+        publication.image_url = (data.get("image") or {}).get("url") or ""
+        publication.save()
+        IngestDelivery.objects.create(
+            delivery_id=delivery_id,
+            payload_hash=digest,
+            publication=publication,
+        )
 
         return Response(
             {

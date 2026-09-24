@@ -7,6 +7,7 @@ import uuid
 import pytest
 from rest_framework import status
 
+from semantichub_wagtail import views
 from semantichub_wagtail.models import IngestDelivery, IngestPublication
 from tests.testapp.models import ArticlePage
 
@@ -231,3 +232,24 @@ class TestPairHostileInput:
         publication = IngestPublication.objects.get()
         assert publication.image_url == url
         publication.full_clean()
+
+
+@pytest.mark.django_db
+class TestPairRace:
+    def test_lost_race_on_a_new_result_resolves_against_the_winner(
+        self, api_client, article_index, monkeypatch
+    ):
+        post_pair(api_client, delivery_id="dl-winner")
+        lookups = []
+        original = views.find_publication
+
+        def stale_lookup(result_id):
+            lookups.append(result_id)
+            return None if len(lookups) == 1 else original(result_id)
+
+        monkeypatch.setattr(views, "find_publication", stale_lookup)
+        response = post_pair(api_client, delivery_id="dl-loser")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["status"] == "duplicate"
+        assert IngestPublication.objects.count() == 1
+        assert ArticlePage.objects.count() == 2

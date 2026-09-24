@@ -1,4 +1,5 @@
 from semantichub_wagtail.adapters import ArticleAdapter, PairAdapter
+from semantichub_wagtail.content import unique_slug
 from semantichub_wagtail.models import IngestPublication
 from tests.testapp.models import ArticleIndexPage, ArticlePage
 
@@ -33,8 +34,8 @@ class ExamplePairAdapter(PairAdapter):
         index = ArticleIndexPage.objects.first()
         if publication is None:
             publication = IngestPublication()
-            en_page = index.add_child(instance=ArticlePage(**self._fields(data["locales"]["en"])))
-            pl_page = index.add_child(instance=ArticlePage(**self._fields(data["locales"]["pl"])))
+            en_page = self._create(index, data["locales"]["en"])
+            pl_page = self._create(index, data["locales"]["pl"])
         else:
             en_page = publication.en_page.specific
             pl_page = publication.pl_page.specific
@@ -43,6 +44,11 @@ class ExamplePairAdapter(PairAdapter):
         publication.en_page = en_page
         publication.pl_page = pl_page
         return publication
+
+    def _create(self, index, locale_data):
+        page = ArticlePage(**self._fields(locale_data))
+        page.slug = unique_slug(index, page.slug)
+        return index.add_child(instance=page)
 
     def _fields(self, locale_data):
         return {
