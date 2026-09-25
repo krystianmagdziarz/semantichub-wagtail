@@ -19,7 +19,8 @@ topics through configurable workflows. When a draft is accepted, SemanticHub
 delivers it to your site as a webhook. This package is the receiving end of
 that delivery for Wagtail sites.
 
-<img width="2047" height="1158" alt="semantichub-dashboard" src="https://github.com/user-attachments/assets/3688f962-5be6-4229-97b8-37b32923e30c" />
+<img width="1689" height="1306" alt="semantichub-dashboard-en" src="https://github.com/user-attachments/assets/56730b5c-6820-4dc9-bc26-67e79aadae9f" />
+
 
 ## Features
 
