@@ -10,6 +10,8 @@ finished articles from SemanticHub over webhooks and turns them into Wagtail
 pages that wait for editorial approval. Nothing goes live behind the editor's
 back.
 
+Explainer video: [YouTube SemanticHub](https://www.youtube.com/watch?v=ZMfHpH8GdxA)
+
 ## What SemanticHub is
 
 SemanticHub watches the sources you care about (news portals, RSS feeds,
