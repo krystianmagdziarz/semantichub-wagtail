@@ -1,6 +1,13 @@
 # semantichub-wagtail
 
 [![CI](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml/badge.svg)](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/codeql.yml/badge.svg)](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/codeql.yml)
+[![Coverage](https://codecov.io/gh/krystianmagdziarz/semantichub-wagtail/graph/badge.svg)](https://codecov.io/gh/krystianmagdziarz/semantichub-wagtail)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Django](https://img.shields.io/badge/django-5.2%20%7C%206.0%20%7C%206.1-0C4B33?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Wagtail](https://img.shields.io/badge/wagtail-8.x-43B1B0?logo=wagtail&logoColor=white)](https://wagtail.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <img width="1600" height="395" alt="semantichub-logo" src="https://github.com/user-attachments/assets/62a8d7fe-19c6-4737-bedb-a13ba09ec8b2" />
@@ -315,10 +322,14 @@ Everything else is passed to the adapter untouched.
 
 ```bash
 uv sync
-uv run pytest
+uv run pre-commit install
+uv run pytest --cov
 uv run ruff check .
 uv run ruff format --check .
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the pull request checklist and
+[SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 The test suite runs against a throwaway Wagtail project in `tests/` with
 example adapters in `tests/testapp`.

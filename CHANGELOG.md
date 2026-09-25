@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Branch coverage reporting with a 95% gate, uploaded to Codecov from CI.
+- CodeQL analysis, Dependabot updates, pre-commit hooks, issue and pull
+  request templates, `SECURITY.md`, `CONTRIBUTING.md` and GitHub Copilot
+  review instructions.
+
+### Changed
+
+- Tests treat warnings as errors and run with strict pytest markers and config.
+
 ## [0.1.0]
 
 First public release.
