@@ -9,7 +9,7 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Branch coverage reporting with a 95% gate, uploaded to Codecov from CI.
-- CodeQL analysis, Dependabot updates, pre-commit hooks, issue and pull
+- Dependabot updates, pre-commit hooks, issue and pull
   request templates, `SECURITY.md`, `CONTRIBUTING.md` and GitHub Copilot
   review instructions.
 

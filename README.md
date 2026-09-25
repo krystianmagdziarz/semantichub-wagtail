@@ -1,7 +1,6 @@
 # semantichub-wagtail
 
 [![CI](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml/badge.svg)](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/codeql.yml/badge.svg)](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/codeql.yml)
 [![Coverage](https://codecov.io/gh/krystianmagdziarz/semantichub-wagtail/graph/badge.svg)](https://codecov.io/gh/krystianmagdziarz/semantichub-wagtail)
 [![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![Django](https://img.shields.io/badge/django-5.2%20%7C%206.0%20%7C%206.1-0C4B33?logo=django&logoColor=white)](https://www.djangoproject.com/)
