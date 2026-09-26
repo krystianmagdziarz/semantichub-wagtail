@@ -6,6 +6,36 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-26
+
+- `ArticleAdapter.get_fields()` declares receiver fields: metadata the
+  article content doesn't carry (category, department, a "sponsored" flag),
+  in the shape SemanticHub's manifest expects. A required field missing
+  from `payload["fields"]` (absent, `None`, `""` or an empty list)
+  answers `422 {"detail": "missing_field:<key>"}` before any page,
+  publication or receipt is saved, including for `test_delivery`.
+  `ArticleAdapter.apply_fields(page, fields)` writes the values onto every
+  language page of a delivery, at build and at update.
+- `semantichub_wagtail.manifest.build_manifest()` reports this
+  installation's `blocks` (none: the package never decomposes content into
+  blocks), `sections` (`seo`, since `seo_description` is the only value
+  routed outside `body`), `features`, `fields` (from the configured
+  adapter) and `version`.
+- `python manage.py semantichub_push_manifest` sends that manifest to
+  `PUT {SEMANTICHUB_API_BASE_URL}/api/goals/{SEMANTICHUB_GOAL_ID}/target-manifest`
+  with `Authorization: Bearer {SEMANTICHUB_AGENT_TOKEN}` and
+  `User-Agent: SemanticHub-wagtail/<version>`. Missing configuration or a
+  failed push exits 1 without raising inside request handling; the command
+  is meant for a daily cron or systemd timer, and right after a
+  `get_fields()` change.
+- `GET <prefix>/manifest/` returns the same manifest under inbound
+  authentication, for diagnostics.
+- `mode` other than `article` now answers `422 {"detail": "unsupported"}`,
+  not `400`.
+- New settings: `SEMANTICHUB_API_BASE_URL`, `SEMANTICHUB_AGENT_TOKEN`,
+  `SEMANTICHUB_GOAL_ID`, all defaulting to `""` (manifest push is a no-op
+  without all three).
+
 ## [0.2.0] - 2026-09-25
 
 - One inbound endpoint accepts both the v3 article payload and the v5 payload
@@ -45,6 +75,7 @@ First public release.
 - Cover image downloads restricted to public HTTPS hosts, pinned to the
   resolved address, with redirect, size, time and file type limits.
 
-[Unreleased]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/releases/tag/v0.1.0

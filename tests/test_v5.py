@@ -304,3 +304,50 @@ class TestV5Delivery:
     def test_pair_endpoint_is_gone(self, api_client):
         response = api_client.post("/api/semantichub/pair/", b"{}", content_type="application/json")
         assert response.status_code == 404
+
+
+REQUIRED_CATEGORY_FIELD = [
+    {
+        "key": "category",
+        "label": "Category",
+        "type": "text",
+        "required": True,
+        "multiple": False,
+        "options": [],
+    }
+]
+
+
+@pytest.mark.django_db
+class TestV5ReceiverFields:
+    def test_missing_required_field_is_422_and_saves_nothing(
+        self, api_client, article_index, article_index_en, monkeypatch
+    ):
+        from tests.testapp.adapter import ExampleArticleAdapter
+
+        monkeypatch.setattr(
+            ExampleArticleAdapter, "get_fields", lambda self: REQUIRED_CATEGORY_FIELD
+        )
+        r = post_v5(api_client, make_v5_payload(fields={"category": None}))
+        assert r.status_code == 422
+        assert r.json() == {"detail": "missing_field:category"}
+        assert not IngestPublication.objects.exists()
+        assert not IngestDelivery.objects.exists()
+
+    def test_apply_fields_is_called_for_every_language_page(
+        self, api_client, article_index, article_index_en, monkeypatch
+    ):
+        from tests.testapp.adapter import ExampleArticleAdapter
+
+        monkeypatch.setattr(
+            ExampleArticleAdapter, "get_fields", lambda self: REQUIRED_CATEGORY_FIELD
+        )
+        calls = []
+
+        def apply_fields(self, page, fields):
+            calls.append(fields.get("category"))
+
+        monkeypatch.setattr(ExampleArticleAdapter, "apply_fields", apply_fields)
+        r = post_v5(api_client, make_v5_payload(fields={"category": "news"}))
+        assert r.status_code == 201, r.content
+        assert calls == ["news", "news"]

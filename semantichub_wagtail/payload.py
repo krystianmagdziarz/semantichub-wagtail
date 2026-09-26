@@ -18,6 +18,10 @@ class InvalidPayload(Exception):
     pass
 
 
+class UnsupportedMode(InvalidPayload):
+    pass
+
+
 @dataclass
 class Article:
     title: str
@@ -166,10 +170,10 @@ def parse_article(data):
     cluster = clusters[0]
     if not isinstance(cluster, dict):
         raise InvalidPayload("clusters must contain objects")
-    if data.get("mode") != "article" or not content.text(data.get("llm_response")):
-        raise InvalidPayload(
-            "payload is not a generated article (mode=article + llm_response required)"
-        )
+    if data.get("mode") != "article":
+        raise UnsupportedMode("mode must be article")
+    if not content.text(data.get("llm_response")):
+        raise InvalidPayload("llm_response is required")
 
     identity = parse_identity(data)
     if identity is not None and identity.source_lang and identity.locales:

@@ -16,6 +16,12 @@ class ArticleAdapter:
     def apply_tags(self, page, tags):
         pass
 
+    def get_fields(self) -> list[dict]:
+        return []
+
+    def apply_fields(self, page, fields: dict) -> None:
+        pass
+
 
 def _load(setting_name, base_hint):
     dotted_path = getattr(settings, setting_name, "") or ""
@@ -26,3 +32,14 @@ def _load(setting_name, base_hint):
 
 def get_adapter():
     return _load("SEMANTICHUB_INGEST_ADAPTER", "ArticleAdapter")
+
+
+def missing_required_field(adapter, fields):
+    for spec in adapter.get_fields():
+        if not spec.get("required"):
+            continue
+        key = spec.get("key")
+        value = fields.get(key)
+        if value is None or value == "" or value == []:
+            return key
+    return None

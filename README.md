@@ -118,6 +118,24 @@ class BlogArticleAdapter(ArticleAdapter):
 
     def apply_tags(self, page, tags):
         page.tags.set(tags)
+
+    def get_fields(self):
+        return [
+            {
+                "key": "category",
+                "label": "Category",
+                "type": "enum",
+                "required": True,
+                "multiple": False,
+                "options": [
+                    {"value": "news", "label": "News"},
+                    {"value": "guide", "label": "Guide"},
+                ],
+            }
+        ]
+
+    def apply_fields(self, page, fields):
+        page.category = fields.get("category", "")
 ```
 
 | Method | Required | Called with | Must |
@@ -126,6 +144,8 @@ class BlogArticleAdapter(ArticleAdapter):
 | `build(article)` | yes | every new page, once per language | return an unsaved page instance; the package sets the slug, adds it under the parent and saves a revision |
 | `update(page, article)` | yes | a redelivery of a known `Idempotency-Key` (v3), a newer revision of a known result (v5), or the first v5 delivery of a result whose page was created before v5 and is adopted for the source language | copy fields onto `page` without saving |
 | `apply_tags(page, tags)` | no | when the delivery has tags | attach the tag names to `page` |
+| `get_fields()` | no | building the manifest (see below) | return the receiver fields this installation requires, `[]` by default |
+| `apply_fields(page, fields)` | no | every page, build and update alike | copy `payload["fields"]` values onto `page` without saving; no-op by default |
 
 `article` is a `semantichub_wagtail.payload.Article`:
 
@@ -163,6 +183,63 @@ for link in publication.pages.all():  # one IngestPublicationPage per language
     print(link.language_code, link.page_id)
 ```
 
+## Receiver fields and the manifest
+
+`ArticleAdapter.get_fields()` declares values a delivery must carry that the
+article content itself doesn't (a category, a department, a "sponsored"
+flag). Each entry has the shape SemanticHub's target manifest expects:
+
+```python
+{
+    "key": "category",  # ^[a-z0-9_]{1,40}$
+    "label": "Category",
+    "type": "enum",  # "enum", "text" or "bool"
+    "required": True,
+    "multiple": False,  # only "enum" may be True
+    "options": [{"value": "news", "label": "News"}],  # required for "enum"
+}
+```
+
+Before any page, publication or receipt is saved, every `required` field is
+checked against `payload["fields"]`. Missing means absent, `None`, `""` or an
+empty list. A missing field answers `422 {"detail": "missing_field:<key>"}`
+and saves nothing, including when `test_delivery: true` is set: "Send test"
+is meant to catch this before a real delivery does. `ArticleAdapter` declares
+no fields by default, so a plain page model requires nothing.
+
+When a delivery passes the check, `apply_fields(page, fields)` is called for
+every language page, at build and at update, with the full
+`payload["fields"]` dict (or `{}` when the payload carries none). It must
+copy the values onto `page` without saving; the package saves it for you.
+
+The same declaration is reported to SemanticHub over the manifest, so a goal can require the field in the first place:
+
+```
+$ python manage.py semantichub_push_manifest
+semantichub manifest pushed
+```
+
+`semantichub_wagtail.manifest.build_manifest()` returns `blocks` (always
+empty: this package never decomposes a body into blocks, only ever a whole
+`body`/`body_html` string), `sections` (`seo`, since `seo_description` is
+the only value routed outside `body`), `features`, `fields` (from the
+configured adapter) and `version`. The management command `PUT`s it to
+`{SEMANTICHUB_API_BASE_URL}/api/goals/{SEMANTICHUB_GOAL_ID}/target-manifest`
+with `Authorization: Bearer {SEMANTICHUB_AGENT_TOKEN}` and
+`User-Agent: SemanticHub-wagtail/<version>`, and exits `0` on success, `1`
+when configuration is missing or the request fails.
+
+Run it once a day (a host cron entry or a systemd timer) and again right
+after changing `get_fields()`:
+
+```cron
+20 3 * * * cd /path/to/site && /path/to/venv/bin/python manage.py semantichub_push_manifest
+```
+
+`GET <prefix>/manifest/` returns the same manifest under the same
+authentication as the inbound endpoint, for diagnostics; SemanticHub
+never reads it itself, only the pushed `PUT` counts.
+
 ## Settings
 
 | Setting | Default | Purpose |
@@ -172,10 +249,18 @@ for link in publication.pages.all():  # one IngestPublicationPage per language
 | `SEMANTICHUB_INGEST_TOKEN` | `""` | Shared bearer token checked against `Authorization: Bearer <token>`. |
 | `SEMANTICHUB_INGEST_SECRET` | `""` | HMAC secret for signed requests. |
 | `SEMANTICHUB_INGEST_PUBLISH_MODE` | `"moderation"` | Default for accepted articles: `moderation`, `draft` or `publish`. |
+| `SEMANTICHUB_API_BASE_URL` | `""` | SemanticHub API address used by `semantichub_push_manifest`, e.g. `https://your-instance.semantichub.app`. |
+| `SEMANTICHUB_AGENT_TOKEN` | `""` | Bearer token authorizing the manifest push. |
+| `SEMANTICHUB_GOAL_ID` | `""` | Id of the goal whose manifest this installation pushes. |
 
 With neither the token nor the secret set, every request is rejected. When
 both are set, either one authorizes a delivery. Use long random
 values for both, for example `python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+
+`SEMANTICHUB_API_BASE_URL`, `SEMANTICHUB_AGENT_TOKEN` and
+`SEMANTICHUB_GOAL_ID` are independent of the three above: they authorize
+this site calling out to SemanticHub, not SemanticHub calling in. Leaving
+any of them unset makes `push_manifest()` a silent no-op, logged at `debug`.
 
 ## Publish policy
 
@@ -197,7 +282,7 @@ Redeliveries of a page that is already live never touch the published
 version; the change lands in a new revision that goes through the same
 policy.
 
-## Endpoint
+## Endpoints
 
 ### `POST <prefix>/inbound/`
 
@@ -235,9 +320,11 @@ Responses for v2 and v3:
 | `201` | `{"status": "created", "page_id", "slug", "outcome", "live"}` | a new page was created |
 | `200` | `{"status": "updated", "page_id", "slug", "outcome", "live"}` | redelivery of a known `Idempotency-Key` |
 | `200` | `{"status": "duplicate", "page_id"}` | the page for that key was deleted, or a concurrent delivery with the same key won |
-| `400` | `{"detail"}` | invalid JSON, not a generated article, or an `Idempotency-Key` over 255 characters |
+| `400` | `{"detail"}` | invalid JSON, missing `llm_response`, or an `Idempotency-Key` over 255 characters |
 | `401` | `{"detail"}` | missing or invalid credentials |
 | `415` | `{"detail"}` | the body is not `application/json` |
+| `422` | `{"detail": "unsupported"}` | `mode` is not `article` |
+| `422` | `{"detail": "missing_field:<key>"}` | a required field from `ArticleAdapter.get_fields()` is missing from `fields`; also for `test_delivery: true` |
 | `500` | `{"detail"}` | the adapter returned no parent page |
 
 Responses for v5:
@@ -251,6 +338,8 @@ Responses for v5:
 | `401` | `{"detail"}` | missing or invalid credentials |
 | `415` | `{"detail"}` | the body is not `application/json` |
 | `409` | `{"detail", "result_id", "revision"}` | an older revision than the stored one, the stored revision with different content, or a delivery id reused with a different payload; `revision` is the stored one |
+| `422` | `{"detail": "unsupported"}` | `mode` is not `article` |
+| `422` | `{"detail": "missing_field:<key>"}` | a required field from `ArticleAdapter.get_fields()` is missing from `fields`; also for `test_delivery: true` |
 | `500` | `{"detail"}` | the adapter returned no parent page for one of the languages; nothing is saved |
 
 `pages` maps each language code to `{"page_id", "slug", "outcome", "live"}`.
@@ -261,7 +350,7 @@ Payload fields read by the package:
 
 | Field | Notes |
 | --- | --- |
-| `mode` | must be `article` |
+| `mode` | must be `article`; any other value answers `422 {"detail": "unsupported"}` |
 | `llm_response` | article body, markdown (v3) or HTML (v2); required |
 | `clusters` | non-empty list; the first entry provides `name`, `description`, `url_slug` and `semantic_groups` |
 | `title`, `lead` | optional, fall back to the topic |
@@ -274,6 +363,14 @@ Payload fields read by the package:
 | `source_lang` | v5: source language code (`pair_source_lang` is accepted as an alias) |
 | `locales` | v5: optional object keyed by language code; each entry is an object that may carry `title`, `slug`, `lead`, `body`, `body_html` and `seo_description` |
 | `workflow_execution` | v5: id of the delivered result, used to adopt a page created before v5 |
+| `fields` | optional object; checked against `ArticleAdapter.get_fields()` before any page is saved (see "Receiver fields and the manifest") |
+
+### `GET <prefix>/manifest/`
+
+Returns this installation's manifest (`semantichub_wagtail.manifest.build_manifest()`)
+under the same bearer token or HMAC signature as the inbound endpoint. `401`
+on missing or invalid credentials. This is diagnostics only: SemanticHub
+never calls it, it only receives the `PUT` from `semantichub_push_manifest`.
 
 ## Security model
 

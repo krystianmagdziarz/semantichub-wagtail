@@ -118,9 +118,10 @@ class TestInboundArticle:
         )
         assert response.status_code == status.HTTP_201_CREATED
 
-    def test_non_article_mode_returns_400(self, api_client, article_index):
+    def test_non_article_mode_returns_422_unsupported(self, api_client, article_index):
         response = post(api_client, payload=make_payload(mode="cluster", llm_response=None))
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json() == {"detail": "unsupported"}
         assert not ArticlePage.objects.exists()
 
     def test_missing_clusters_returns_400(self, api_client, article_index):
@@ -390,3 +391,84 @@ class TestRequestSize:
         response = post(api_client, payload=make_payload(llm_response="x" * 4096))
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert not ArticlePage.objects.exists()
+
+
+REQUIRED_CATEGORY_FIELD = [
+    {
+        "key": "category",
+        "label": "Category",
+        "type": "text",
+        "required": True,
+        "multiple": False,
+        "options": [],
+    }
+]
+
+
+@pytest.mark.django_db
+class TestReceiverFields:
+    def test_adapter_without_fields_behaves_as_before(self, api_client, article_index):
+        response = post(api_client)
+        assert response.status_code == status.HTTP_201_CREATED
+
+    def test_missing_required_field_is_422_and_saves_nothing(
+        self, api_client, article_index, monkeypatch
+    ):
+        from tests.testapp.adapter import ExampleArticleAdapter
+
+        monkeypatch.setattr(
+            ExampleArticleAdapter, "get_fields", lambda self: REQUIRED_CATEGORY_FIELD
+        )
+        response = post(api_client, payload=make_payload(fields={"category": ""}))
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json() == {"detail": "missing_field:category"}
+        assert not ArticlePage.objects.exists()
+        assert not IngestReceipt.objects.exists()
+
+    def test_missing_fields_key_entirely_is_also_422(self, api_client, article_index, monkeypatch):
+        from tests.testapp.adapter import ExampleArticleAdapter
+
+        monkeypatch.setattr(
+            ExampleArticleAdapter, "get_fields", lambda self: REQUIRED_CATEGORY_FIELD
+        )
+        response = post(api_client, payload=make_payload())
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json() == {"detail": "missing_field:category"}
+
+    def test_test_delivery_with_missing_required_field_is_422_not_ignored(
+        self, api_client, article_index, monkeypatch
+    ):
+        from tests.testapp.adapter import ExampleArticleAdapter
+
+        monkeypatch.setattr(
+            ExampleArticleAdapter, "get_fields", lambda self: REQUIRED_CATEGORY_FIELD
+        )
+        response = post(api_client, payload=make_payload(test_delivery=True))
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_required_field_value_reaches_apply_fields_on_create_and_update(
+        self, api_client, article_index, monkeypatch
+    ):
+        from tests.testapp.adapter import ExampleArticleAdapter
+
+        monkeypatch.setattr(
+            ExampleArticleAdapter, "get_fields", lambda self: REQUIRED_CATEGORY_FIELD
+        )
+        received = []
+
+        def apply_fields(self, page, fields):
+            received.append(dict(fields))
+            page.search_description = fields.get("category", "")
+
+        monkeypatch.setattr(ExampleArticleAdapter, "apply_fields", apply_fields)
+
+        create = post(api_client, payload=make_payload(fields={"category": "news"}))
+        assert create.status_code == status.HTTP_201_CREATED
+        page = ArticlePage.objects.get()
+        assert page.search_description == "news"
+
+        update = post(api_client, payload=make_payload(fields={"category": "sport"}))
+        assert update.status_code == status.HTTP_200_OK
+        page.refresh_from_db()
+        assert page.search_description == "sport"
+        assert received == [{"category": "news"}, {"category": "sport"}]
