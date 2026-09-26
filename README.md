@@ -3,10 +3,14 @@
 [![CI](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml/badge.svg)](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+<img width="1600" height="395" alt="semantichub-logo" src="https://github.com/user-attachments/assets/62a8d7fe-19c6-4737-bedb-a13ba09ec8b2" />
+
 Wagtail integration for [SemanticHub](https://semantichub.app). It receives
 finished articles from SemanticHub over webhooks and turns them into Wagtail
 pages that wait for editorial approval. Nothing goes live behind the editor's
 back.
+
+Explainer video: [YouTube SemanticHub](https://www.youtube.com/watch?v=ZMfHpH8GdxA)
 
 ## What SemanticHub is
 
@@ -16,6 +20,9 @@ clusters related pieces into topics and writes article drafts from those
 topics through configurable workflows. When a draft is accepted, SemanticHub
 delivers it to your site as a webhook. This package is the receiving end of
 that delivery for Wagtail sites.
+
+<img width="1689" height="1306" alt="semantichub-dashboard-en" src="https://github.com/user-attachments/assets/56730b5c-6820-4dc9-bc26-67e79aadae9f" />
+
 
 ## Features
 
