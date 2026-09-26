@@ -73,7 +73,6 @@ def _image_url(data):
 
 
 def _default_language():
-    """Site language used as the page key of a v5 delivery without any language."""
     allowed = allowed_languages()
     try:
         code = Locale.get_default().language_code
@@ -85,10 +84,6 @@ def _default_language():
 
 
 class InboundArticleView(APIView):
-    """One endpoint for every delivery. A payload without result_id (v2/v3)
-    is keyed by Idempotency-Key through IngestReceipt; a payload with
-    result_id (v5) is keyed by result_id and revision, one page per language."""
-
     authentication_classes = ()
     permission_classes = (AllowAny,)
     parser_classes = (JSONParser,)
@@ -111,7 +106,6 @@ class InboundArticleView(APIView):
             )
 
         if data.get("test_delivery") is True:
-            # "Send test" from SemanticHub: a production site creates no test pages.
             return Response(
                 {"status": "ignored", "reason": "test_delivery"},
                 status=status.HTTP_200_OK,
@@ -121,8 +115,6 @@ class InboundArticleView(APIView):
         if identity is None:
             return self._legacy(request, article, adapter)
         return self._v5(request, data, identity, article, adapter)
-
-    # v2/v3: Idempotency-Key and IngestReceipt
 
     def _legacy(self, request, article, adapter):
         idem_key = request.headers.get("Idempotency-Key", "").strip()
@@ -162,8 +154,6 @@ class InboundArticleView(APIView):
 
         return _page_response("created", outcome, status.HTTP_201_CREATED)
 
-    # v5: result_id, revision and a delivery id
-
     def _v5(self, request, data, identity, article, adapter):
         delivery_id = (
             request.headers.get("X-SH-Delivery", "").strip()
@@ -179,8 +169,6 @@ class InboundArticleView(APIView):
             )
         digest = hashlib.sha256(request.body).hexdigest()
 
-        # A concurrent delivery of the same result can win the insert race;
-        # one retry then sees its rows and answers duplicate or conflict.
         try:
             with transaction.atomic():
                 return self._deliver(data, identity, article, adapter, delivery_id, digest)
@@ -279,10 +267,6 @@ class InboundArticleView(APIView):
         )
 
     def _adopt_legacy_page(self, publication, data, identity, source_lang):
-        """A page created before v5 becomes the source-language page of the new
-        publication instead of a duplicate. The old Idempotency-Key was the id
-        of the delivered result, which v5 sends as workflow_execution; the
-        chain root (result_id) is the fallback."""
         keys = [
             key
             for key in (data.get("workflow_execution"), str(identity.result_id))
@@ -300,8 +284,6 @@ class InboundArticleView(APIView):
                 language_code=source_lang,
                 defaults={"page": receipt.page},
             )
-
-    # shared page operations
 
     def _create_page(self, article, adapter, parent):
         page = adapter.build(article)

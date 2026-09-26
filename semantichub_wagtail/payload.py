@@ -65,7 +65,6 @@ def _source_lang(data, locales):
 
 
 def parse_identity(data):
-    """Delivery identity of a v5 payload; None for a payload without result_id."""
     if not isinstance(data, dict):
         raise InvalidPayload("payload must be a JSON object")
     if _version(data) not in SUPPORTED_VERSIONS:
@@ -129,11 +128,6 @@ def _first_cluster(data):
 
 
 def article_for_locale(data, language_code, locale):
-    """Article for one language of a v5 delivery.
-
-    The sender may leave title and lead empty. The source language then falls
-    back like v3 (cluster name, cluster description); another language takes
-    the source title, so no page is created without a title."""
     cluster = _first_cluster(data)
     locales = data.get("locales") if isinstance(data.get("locales"), dict) else {}
     source = _source_lang(data, locales)

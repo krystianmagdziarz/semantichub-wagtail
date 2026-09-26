@@ -43,9 +43,6 @@ class IngestPublication(models.Model):
 
 
 class IngestPublicationPage(models.Model):
-    """One page per language of a publication. A v5 delivery may carry one
-    language or several; the set is open (see SEMANTICHUB_INGEST_LANGUAGES)."""
-
     publication = models.ForeignKey(
         IngestPublication,
         on_delete=models.CASCADE,

@@ -87,7 +87,7 @@ class TestV5Delivery:
         assert pub.page_for("en").get_parent().id == article_index_en.id
         assert pub.page_for("pl").specific.title == "Tytuł PL"
         assert pub.page_for("en").specific.body.startswith("<h2>Intro</h2>")
-        assert not pub.page_for("pl").live  # moderation policy, not live
+        assert not pub.page_for("pl").live
         assert IngestDelivery.objects.filter(delivery_id="dl-1").exists()
 
     def test_single_language_creates_one_page(self, api_client, article_index):
