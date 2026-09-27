@@ -16,10 +16,11 @@ class ArticleAdapter:
     def apply_tags(self, page, tags):
         pass
 
+    def get_fields(self) -> list[dict]:
+        return []
 
-class PairAdapter:
-    def upsert(self, publication, data, revision):
-        raise NotImplementedError
+    def apply_fields(self, page, fields: dict) -> None:
+        pass
 
 
 def _load(setting_name, base_hint):
@@ -33,5 +34,12 @@ def get_adapter():
     return _load("SEMANTICHUB_INGEST_ADAPTER", "ArticleAdapter")
 
 
-def get_pair_adapter():
-    return _load("SEMANTICHUB_INGEST_PAIR_ADAPTER", "PairAdapter")
+def missing_required_field(adapter, fields):
+    for spec in adapter.get_fields():
+        if not spec.get("required"):
+            continue
+        key = spec.get("key")
+        value = fields.get(key)
+        if value is None or value == "" or value == []:
+            return key
+    return None

@@ -1,10 +1,11 @@
 # semantichub-wagtail
 
 Django/Wagtail package that receives SemanticHub webhooks and turns them into
-Wagtail pages awaiting editorial approval. The public surface is two views
-(`inbound/`, `pair/`), the `ArticleAdapter` / `PairAdapter` contracts, the
-`Article` dataclass, the `SEMANTICHUB_INGEST_*` settings and the response
-shapes documented in `README.md`.
+Wagtail pages awaiting editorial approval. The public surface is the
+`inbound/` view (v3 and v5 payloads), the `manifest/` view and the
+`semantichub_push_manifest` command, the `ArticleAdapter` contract (including
+`get_fields()` / `apply_fields()`), the `Article` dataclass, the
+`SEMANTICHUB_*` settings and the response shapes documented in `README.md`.
 
 ## Commands
 
@@ -23,12 +24,14 @@ adapters live in `tests/` and `tests/testapp/`.
 | Module | Role |
 | --- | --- |
 | `auth.py` | bearer token and HMAC (`X-SH-Timestamp`, `X-SH-Signature`) checks |
-| `views.py` | both endpoints, idempotency and revision guards |
-| `payload.py`, `content.py` | payload validation, markdown/HTML rendering, slugs, tags |
+| `views.py` | inbound (v3 legacy and v5 per-language) and manifest views, idempotency and revision guards |
+| `payload.py`, `content.py` | payload validation, v5 identity and locales, markdown/HTML rendering, slugs, tags |
 | `images.py` | SSRF-safe cover download pinned to a checked public address |
 | `publish.py` | service account and moderation/draft/publish policy |
-| `adapters.py` | adapter base classes and loaders |
-| `models.py` | `IngestReceipt`, `IngestPublication`, `IngestDelivery` |
+| `adapters.py` | `ArticleAdapter`, its loader and required receiver fields |
+| `manifest.py`, `management/` | manifest build and push to SemanticHub |
+| `settings.py` | typed access to `SEMANTICHUB_*` settings |
+| `models.py` | `IngestReceipt`, `IngestPublication`, `IngestPublicationPage`, `IngestDelivery` |
 
 ## Conventions
 
@@ -47,17 +50,20 @@ the diff, each with the concrete input that breaks it and the smallest fix.
 Do not comment on formatting; ruff enforces it. Treat these as blocking:
 
 - **Retries.** SemanticHub retries every 5xx, so invalid input must answer
-  4xx. An unhandled `ValidationError`, `DataError` or `KeyError` reachable
-  from the payload means endless retries.
+  4xx (`400` malformed, `422` unsupported mode or missing required field).
+  An unhandled `ValidationError`, `DataError` or `KeyError` reachable from
+  the payload means endless retries.
 - **Authentication first.** Nothing reads `request.data` or touches the
-  database before `is_authorized` / `is_signed`. Secret comparisons use
-  `hmac.compare_digest`. The pair endpoint accepts HMAC only.
-- **Idempotency.** Replays with the same `Idempotency-Key` or `X-SH-Delivery`
-  never create pages; a stale `revision` answers 409; the `IntegrityError`
-  retry paths still converge when two deliveries race.
+  database before `is_authorized`. Secret comparisons use
+  `hmac.compare_digest`. The manifest push never raises inside request
+  handling and never logs `SEMANTICHUB_AGENT_TOKEN`.
+- **Idempotency.** Replays with the same `Idempotency-Key` (v3) or
+  `X-SH-Delivery` (v5) never create pages; a stale or reused `revision`
+  answers 409 with the stored revision; the `IntegrityError` retry paths
+  still converge when two deliveries race; `test_delivery` never writes.
 - **Transactions.** Guarded rows are read with `select_for_update` inside the
-  same `transaction.atomic()`; network calls (image downloads) stay outside
-  transactions.
+  same `transaction.atomic()`; new network calls stay outside transactions
+  where the flow allows it.
 - **Database limits.** Payload strings are bounded before they reach a
   `max_length` column; required Wagtail fields (`title`, `slug`) cannot end
   up empty; sibling slugs stay unique.
@@ -65,5 +71,6 @@ Do not comment on formatting; ruff enforces it. Treat these as blocking:
   inactive `semantichub` account's `publish` permission; payload fields never
   widen what the site owner configured; a live page changes only through
   `apply_policy`.
-- **Public API.** Changes to adapters, `Article`, settings names or response
-  shapes need a CHANGELOG entry and a README update.
+- **Public API.** Changes to adapters, `Article`, the manifest shape,
+  settings names or response shapes need a CHANGELOG entry and a README
+  update.

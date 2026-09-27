@@ -1,5 +1,5 @@
 ---
-applyTo: "semantichub_wagtail/auth.py,semantichub_wagtail/images.py,semantichub_wagtail/content.py,semantichub_wagtail/views.py,semantichub_wagtail/publish.py"
+applyTo: "semantichub_wagtail/auth.py,semantichub_wagtail/images.py,semantichub_wagtail/content.py,semantichub_wagtail/payload.py,semantichub_wagtail/views.py,semantichub_wagtail/publish.py,semantichub_wagtail/manifest.py"
 ---
 
 These modules face the internet. Treat every request byte as attacker-controlled
@@ -14,8 +14,11 @@ until `auth.py` accepts it, and payload fields as untrusted after that.
   back through `_pinned_request`; the redirect count, `MAX_BYTES` and the
   deadline stay enforced; content type and decoded format are both checked
   and SVG is never stored.
-- `content.py`: markdown keeps `html: False`; HTML goes through `nh3.clean`;
-  no new path returns unsanitised HTML.
+- `content.py`, `payload.py`: markdown keeps `html: False`; HTML (including
+  v5 `body_html`) goes through `nh3.clean`; no new path returns unsanitised
+  HTML.
+- `manifest.py`: the push goes only to the configured base URL, with a
+  timeout, and never logs or echoes `SEMANTICHUB_AGENT_TOKEN`.
 - `publish.py`: the service account stays inactive with an unusable password.
 - Error responses carry short fixed messages, never secrets, tracebacks or
   echoed payloads.

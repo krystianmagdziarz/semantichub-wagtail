@@ -4,7 +4,13 @@ import pytest
 from django.core.exceptions import ImproperlyConfigured
 
 from semantichub_wagtail.adapters import ArticleAdapter, get_adapter
-from semantichub_wagtail.payload import Article, InvalidPayload, parse_article
+from semantichub_wagtail.payload import (
+    Article,
+    InvalidPayload,
+    article_for_locale,
+    parse_article,
+    parse_identity,
+)
 from tests.testapp.adapter import ExampleArticleAdapter
 
 
@@ -162,3 +168,175 @@ class TestHostilePayloads:
     def test_non_string_tags_are_skipped(self):
         article = parse_article(make_payload(tags=["seo", {"x": 1}, None, 7, "google"]))
         assert article.tags == ["seo", "google"]
+
+
+def make_v5_payload(**overrides):
+    payload = make_payload()
+    payload.update(
+        {
+            "payload_version": 5,
+            "result_id": "6f1b0680-0f1c-4a1b-9a5c-1c2d3e4f5a6b",
+            "revision": 1,
+            "published_at": "2026-09-24T10:00:00+00:00",
+            "source_lang": "pl",
+            "pair_source_lang": "pl",
+            "steps": {"Stylista": {"text": "...", "model": "m", "tokens": 1, "cost": 0.0}},
+            "locales": {
+                "pl": {
+                    "title": "Tytuł PL",
+                    "slug": "tytul-pl",
+                    "lead": "Zajawka PL",
+                    "body": "## Wstęp\n\nAkapit.",
+                    "seo_description": "SEO PL",
+                    "body_html": "<h2>Wstęp</h2>\n<p>Akapit.</p>\n",
+                },
+                "en": {
+                    "title": "Title EN",
+                    "slug": "title-en",
+                    "lead": "Lead EN",
+                    "body": "## Intro\n\nParagraph.",
+                    "seo_description": "SEO EN",
+                    "body_html": "<h2>Intro</h2>\n<p>Paragraph.</p>\n",
+                },
+            },
+        }
+    )
+    payload.update(overrides)
+    return payload
+
+
+def test_v3_payload_has_no_identity():
+    assert parse_identity(make_payload()) is None
+    article = parse_article(make_payload())
+    assert article.language is None
+
+
+def test_v5_identity_and_source_article():
+    data = make_v5_payload()
+    identity = parse_identity(data)
+    assert str(identity.result_id) == "6f1b0680-0f1c-4a1b-9a5c-1c2d3e4f5a6b"
+    assert identity.revision == 1 and identity.source_lang == "pl"
+    assert set(identity.locales) == {"pl", "en"}
+    article = parse_article(data)
+    assert article.language == "pl"
+    assert article.title == "Tytuł PL" and article.lead == "Zajawka PL"
+    assert article.body == "<h2>Wstęp</h2>\n<p>Akapit.</p>\n"
+    assert article.slug_base == "tytul-pl"
+    assert article.seo_description == "SEO PL"
+    assert article.publish_date.isoformat() == "2026-09-24"
+
+
+def test_v5_source_lang_falls_back_to_alias_then_single_locale():
+    data = make_v5_payload()
+    del data["source_lang"]
+    assert parse_identity(data).source_lang == "pl"
+    del data["pair_source_lang"]
+    data["locales"] = {"en": data["locales"]["en"]}
+    assert parse_identity(data).source_lang == "en"
+
+
+def test_article_for_locale_renders_markdown_when_html_missing():
+    data = make_v5_payload()
+    locale = dict(data["locales"]["en"])
+    locale.pop("body_html")
+    article = article_for_locale(data, "en", locale)
+    assert article.language == "en" and article.title == "Title EN"
+    assert article.body.startswith("<h2>Intro</h2>")
+
+
+@pytest.mark.parametrize(
+    "broken",
+    [
+        {"locales": []},
+        {"locales": {"pl": "tekst"}},
+        {"locales": {"de": {"title": "x"}}, "source_lang": "de"},
+        {"revision": 0},
+        {"result_id": "nie-uuid"},
+        {"payload_version": 4},
+        {"locales": {"en": {"title": "x"}}, "source_lang": "pl"},
+    ],
+)
+def test_v5_invalid_shapes(broken):
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_v5_payload(**broken))
+
+
+def test_body_html_is_sanitized_not_reinterpreted():
+    html = (
+        "Plain start with <b>bold</b>.<script>alert(1)</script>"
+        "<h2>H</h2><ul><li>x</li></ul><table><tr><td>c</td></tr></table>"
+        '<blockquote>q</blockquote><a href="https://example.com">l</a>'
+    )
+    data = make_v5_payload()
+    data["locales"]["pl"]["body_html"] = html
+    body = parse_article(data).body
+    assert "&lt;" not in body and "<b>bold</b>" in body
+    assert "<script>" not in body and "alert(1)" not in body
+    for tag in ("<h2>", "<ul>", "<table>", "<blockquote>", "<a "):
+        assert tag in body
+
+
+def test_unsupported_version_rejected_without_result_id():
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_payload(payload_version=4))
+
+
+def test_source_lang_validated_when_locales_empty():
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_v5_payload(locales={}, source_lang="de", pair_source_lang="de"))
+
+
+def test_v5_without_locales_takes_source_language():
+    data = make_v5_payload(locales={})
+    identity = parse_identity(data)
+    assert identity.locales == {} and identity.source_lang == "pl"
+    article = parse_article(data)
+    assert article.language == "pl" and article.title == "Editor title"
+
+
+@pytest.mark.parametrize("revision", [True, 1.5, "abc"])
+def test_revision_must_be_integer(revision):
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_v5_payload(revision=revision))
+
+
+def test_revision_upper_bound():
+    assert parse_identity(make_v5_payload(revision=2**31 - 1)).revision == 2**31 - 1
+    with pytest.raises(InvalidPayload):
+        parse_identity(make_v5_payload(revision=2**31))
+
+
+def test_seo_description_capped():
+    data = make_v5_payload()
+    data["locales"]["pl"]["seo_description"] = "x" * 400
+    assert len(parse_article(data).seo_description) == 255
+
+
+def test_v5_empty_source_title_and_lead_fall_back_like_v3():
+    data = make_v5_payload(title="", lead="")
+    data["locales"]["pl"]["title"] = ""
+    data["locales"]["pl"]["lead"] = ""
+    data["locales"]["pl"]["slug"] = ""
+    assert parse_identity(data).source_lang == "pl"
+    article = parse_article(data)
+    assert article.title == "How to build passive income"
+    assert article.lead == "A practical guide."
+    assert article.slug_base == "how-to-build-passive-income"
+
+
+def test_v5_other_language_with_empty_title_takes_source_title():
+    data = make_v5_payload()
+    data["locales"]["en"]["title"] = ""
+    data["locales"]["en"]["lead"] = ""
+    article = article_for_locale(data, "en", data["locales"]["en"])
+    assert article.title == "Tytuł PL"
+    assert article.lead == ""
+    assert article.slug_base == "title-en"
+
+
+def test_v5_both_titles_empty_fall_back_to_cluster_name():
+    data = make_v5_payload(title="")
+    data["locales"]["pl"]["title"] = ""
+    data["locales"]["en"]["title"] = ""
+    article = article_for_locale(data, "en", data["locales"]["en"])
+    assert article.title == "How to build passive income"
