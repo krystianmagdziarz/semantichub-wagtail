@@ -6,6 +6,7 @@ dist/
 build/
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 db.sqlite3
 test-media/

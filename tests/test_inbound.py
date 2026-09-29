@@ -128,6 +128,23 @@ class TestInboundArticle:
         response = post(api_client, payload=make_payload(clusters=[]))
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_missing_title_returns_400(self, api_client, article_index):
+        payload = make_payload(title="  ")
+        payload["clusters"][0]["name"] = ""
+        response = post(api_client, payload=payload)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json() == {"detail": "title is required"}
+        assert not ArticlePage.objects.exists()
+        assert not IngestReceipt.objects.exists()
+
+    def test_redelivery_without_title_returns_400(self, api_client, article_index):
+        assert post(api_client, idem_key="k").status_code == status.HTTP_201_CREATED
+        payload = make_payload(title="")
+        payload["clusters"][0]["name"] = ""
+        response = post(api_client, payload=payload, idem_key="k")
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert ArticlePage.objects.get().title == "Editor title"
+
     def test_missing_parent_returns_500(self, api_client, db):
         response = post(api_client)
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR

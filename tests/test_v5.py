@@ -305,6 +305,29 @@ class TestV5Delivery:
         response = api_client.post("/api/semantichub/pair/", b"{}", content_type="application/json")
         assert response.status_code == 404
 
+    def test_missing_title_in_every_source_is_400(
+        self, api_client, article_index, article_index_en
+    ):
+        data = make_v5_payload(title="")
+        data["clusters"][0]["name"] = ""
+        data["locales"]["pl"]["title"] = ""
+        data["locales"]["en"]["title"] = " "
+        r = post_v5(api_client, data)
+        assert r.status_code == 400
+        assert r.json() == {"detail": "title is required"}
+        assert not ArticlePage.objects.exists()
+        assert not IngestPublication.objects.exists()
+        assert not IngestDelivery.objects.exists()
+
+    def test_overlong_image_url_is_dropped_not_stored(
+        self, api_client, article_index, article_index_en, monkeypatch
+    ):
+        monkeypatch.setattr(views, "fetch_image", lambda image, title: None)
+        data = make_v5_payload(image={"url": "https://cdn.example.com/" + "a" * 3000})
+        r = post_v5(api_client, data)
+        assert r.status_code == 201, r.content
+        assert IngestPublication.objects.get().image_url == ""
+
 
 REQUIRED_CATEGORY_FIELD = [
     {

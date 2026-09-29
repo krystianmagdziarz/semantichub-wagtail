@@ -46,8 +46,10 @@ Changelog = "https://github.com/krystianmagdziarz/semantichub-wagtail/blob/main/
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=6.0",
     "pytest-django>=4.9",
     "ruff>=0.6",
+    "pre-commit>=4.0",
 ]
 
 [build-system]
@@ -79,6 +81,23 @@ exclude = [
 DJANGO_SETTINGS_MODULE = "tests.settings"
 pythonpath = ["."]
 testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["semantichub_wagtail"]
+omit = ["semantichub_wagtail/migrations/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 95
+exclude_also = [
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
 
 [tool.ruff]
 line-length = 100

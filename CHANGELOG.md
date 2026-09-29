@@ -6,6 +6,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Branch coverage reporting with a 95% gate, uploaded to Codecov from CI.
+- Dependabot updates, pre-commit hooks, issue and pull request templates,
+  `SECURITY.md`, `CONTRIBUTING.md` and GitHub Copilot review instructions.
+
+### Changed
+
+- Tests treat warnings as errors and run with strict pytest markers and config.
+
+### Fixed
+
+- A delivery with no usable title (empty `title`, topic name and, for v5,
+  every locale title) answers `400 {"detail": "title is required"}` instead
+  of failing Wagtail validation with a `500` that SemanticHub would retry
+  forever.
+- Slugs keep letters that Unicode normalisation cannot strip, such as the
+  Polish `ł`: "Jak wybrać łóżko" becomes `jak-wybrac-lozko`, not
+  `jak-wybrac-ozko`.
+
 ## [0.3.0] - 2026-09-26
 
 - `ArticleAdapter.get_fields()` declares receiver fields: metadata the

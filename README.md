@@ -1,6 +1,12 @@
 # semantichub-wagtail
 
 [![CI](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml/badge.svg)](https://github.com/krystianmagdziarz/semantichub-wagtail/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/krystianmagdziarz/semantichub-wagtail/graph/badge.svg)](https://codecov.io/gh/krystianmagdziarz/semantichub-wagtail)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Django](https://img.shields.io/badge/django-5.2%20%7C%206.0%20%7C%206.1-0C4B33?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![Wagtail](https://img.shields.io/badge/wagtail-8.x-43B1B0?logo=wagtail&logoColor=white)](https://wagtail.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <img width="1600" height="395" alt="semantichub-logo" src="https://github.com/user-attachments/assets/62a8d7fe-19c6-4737-bedb-a13ba09ec8b2" />
@@ -167,7 +173,7 @@ class BlogArticleAdapter(ArticleAdapter):
 | `publish_date` | `date` | `published_at` or `executed_at`, falling back to today |
 | `publish_mode` | `str \| None` | `publish_mode` as sent |
 | `cover` | `Image \| None` | the downloaded `image.url`, shared by every language of a delivery |
-| `slug_base` | `str` | v5: slugified `locales.<lang>.slug` or title; v3: slugified `url_slug` or topic name |
+| `slug_base` | `str` | v5: slugified `locales.<lang>.slug` or title; v3: slugified `url_slug` or topic name; ASCII only, with letters such as `ł` transliterated |
 | `cluster` | `dict` | the first entry of `clusters` |
 | `data` | `dict` | the raw payload |
 
@@ -327,7 +333,7 @@ Responses for v2 and v3:
 | `201` | `{"status": "created", "page_id", "slug", "outcome", "live"}` | a new page was created |
 | `200` | `{"status": "updated", "page_id", "slug", "outcome", "live"}` | redelivery of a known `Idempotency-Key` |
 | `200` | `{"status": "duplicate", "page_id"}` | the page for that key was deleted, or a concurrent delivery with the same key won |
-| `400` | `{"detail"}` | invalid JSON, missing `llm_response`, or an `Idempotency-Key` over 255 characters |
+| `400` | `{"detail"}` | invalid JSON, missing `llm_response`, no usable title, or an `Idempotency-Key` over 255 characters |
 | `401` | `{"detail"}` | missing or invalid credentials |
 | `415` | `{"detail"}` | the body is not `application/json` |
 | `422` | `{"detail": "unsupported"}` | `mode` is not `article` |
@@ -341,7 +347,7 @@ Responses for v5:
 | `201` | `{"status": "published", "result_id", "revision", "pages"}` | the first delivery of a result |
 | `200` | `{"status": "updated", "result_id", "revision", "pages"}` | a newer revision of a known result |
 | `200` | `{"status": "duplicate", "result_id", "revision"}` | a replayed delivery id, or the stored revision redelivered with identical bytes |
-| `400` | `{"detail"}` | invalid payload, a language outside `SEMANTICHUB_INGEST_LANGUAGES`, `revision` outside 1 to 2^31-1, or a missing or overlong delivery id |
+| `400` | `{"detail"}` | invalid payload, no usable title, a language outside `SEMANTICHUB_INGEST_LANGUAGES`, `revision` outside 1 to 2^31-1, or a missing or overlong delivery id |
 | `401` | `{"detail"}` | missing or invalid credentials |
 | `415` | `{"detail"}` | the body is not `application/json` |
 | `409` | `{"detail", "result_id", "revision"}` | an older revision than the stored one, the stored revision with different content, or a delivery id reused with a different payload; `revision` is the stored one |
@@ -417,10 +423,14 @@ never calls it, it only receives the `PUT` from `semantichub_push_manifest`.
 
 ```bash
 uv sync
-uv run pytest
+uv run pre-commit install
+uv run pytest --cov
 uv run ruff check .
 uv run ruff format --check .
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the pull request checklist and
+[SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 The test suite runs against a throwaway Wagtail project in `tests/` with
 example adapters in `tests/testapp`.

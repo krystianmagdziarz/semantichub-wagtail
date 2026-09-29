@@ -4,25 +4,37 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - run: python -m pip install ruff
-      - run: ruff check .
+      - run: ruff check --output-format=github .
       - run: ruff format --check .
 
   test:
     name: Python ${{ matrix.python }}, Django ${{ matrix.django }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -36,24 +48,45 @@ jobs:
           - python: "3.14"
             django: "6.1"
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install -e . "django~=${{ matrix.django }}.0" pytest pytest-django
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: >-
+          python -m pip install -e . "django~=${{ matrix.django }}.0"
+          pytest pytest-django pytest-cov
       - run: python -m django makemigrations --check --dry-run semantichub_wagtail
         env:
           DJANGO_SETTINGS_MODULE: tests.settings
           PYTHONPATH: .
-      - run: python -m pytest
+      - run: python -m pytest --cov --cov-report=term --cov-report=xml
+      - uses: codecov/codecov-action@v7
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.fork != true }}
+        with:
+          use_oidc: true
+          files: coverage.xml
+          flags: py${{ matrix.python }}-django${{ matrix.django }}
+          fail_ci_if_error: false
 
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
       - run: python -m pip install build twine
       - run: python -m build
       - run: python -m twine check --strict dist/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7

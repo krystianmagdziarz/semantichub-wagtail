@@ -1,0 +1,33 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The request you sent (redact secrets), the response and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: A minimal payload and adapter, or a failing test.
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: semantichub-wagtail, Wagtail, Django and Python.
+      placeholder: 0.1.0 / Wagtail 8.0 / Django 5.2 / Python 3.13
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database
+      options: [PostgreSQL, SQLite, MySQL/MariaDB, Other]
+    validations:
+      required: true
