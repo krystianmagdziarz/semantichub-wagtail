@@ -262,7 +262,7 @@ never reads it itself, only the pushed `PUT` counts.
 | `SEMANTICHUB_INGEST_TOKEN` | `""` | Shared bearer token checked against `Authorization: Bearer <token>`. |
 | `SEMANTICHUB_INGEST_SECRET` | `""` | HMAC secret for signed requests. |
 | `SEMANTICHUB_INGEST_PUBLISH_MODE` | `"moderation"` | Default for accepted articles: `moderation`, `draft` or `publish`. |
-| `SEMANTICHUB_API_BASE_URL` | `""` | SemanticHub API address used by `semantichub_push_manifest`, e.g. `https://your-instance.semantichub.app`. |
+| `SEMANTICHUB_API_BASE_URL` | `""` | SemanticHub API address used by `semantichub_push_manifest`, e.g. `https://your-instance.semantichub.app`. Must be `https://`; the push refuses anything else. |
 | `SEMANTICHUB_AGENT_TOKEN` | `""` | Bearer token authorizing the manifest push. |
 | `SEMANTICHUB_GOAL_ID` | `""` | Id of the goal whose manifest this installation pushes. |
 

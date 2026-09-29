@@ -18,7 +18,7 @@ Opening paragraph.
 - first item
 - second item
 
-| Model | Cost |
+| Name | Value |
 | --- | --- |
 | A | 1 |
 """

@@ -18,14 +18,10 @@ def make_payload(**overrides):
     payload = {
         "payload_version": 3,
         "mode": "article",
-        "event": "workflow.action",
         "workflow_execution": "exec-abc-123",
-        "workflow_name": "Blog - passive income",
         "title": "Editor title",
         "lead": "Editor lead.",
         "executed_at": "2026-07-21T09:30:00+00:00",
-        "articles_count": 1,
-        "articles": [{"url": "https://example.com/a", "title": "Source A"}],
         "clusters": [
             {
                 "name": "How to build passive income",
@@ -35,9 +31,6 @@ def make_payload(**overrides):
             }
         ],
         "llm_response": "## Intro\n\nBody text.\n",
-        "ai_model": "provider/model",
-        "tokens_used": 1234,
-        "cost": 0.01,
     }
     payload.update(overrides)
     return payload
@@ -186,7 +179,6 @@ def make_v5_payload(**overrides):
             "published_at": "2026-09-24T10:00:00+00:00",
             "source_lang": "pl",
             "pair_source_lang": "pl",
-            "steps": {"Stylista": {"text": "...", "model": "m", "tokens": 1, "cost": 0.0}},
             "locales": {
                 "pl": {
                     "title": "Tytuł PL",
