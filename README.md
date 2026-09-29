@@ -173,7 +173,7 @@ class BlogArticleAdapter(ArticleAdapter):
 | `publish_date` | `date` | `published_at` or `executed_at`, falling back to today |
 | `publish_mode` | `str \| None` | `publish_mode` as sent |
 | `cover` | `Image \| None` | the downloaded `image.url`, shared by every language of a delivery |
-| `slug_base` | `str` | v5: slugified `locales.<lang>.slug` or title; v3: slugified `url_slug` or topic name |
+| `slug_base` | `str` | v5: slugified `locales.<lang>.slug` or title; v3: slugified `url_slug` or topic name; ASCII only, with letters such as `ł` transliterated |
 | `cluster` | `dict` | the first entry of `clusters` |
 | `data` | `dict` | the raw payload |
 
@@ -333,7 +333,7 @@ Responses for v2 and v3:
 | `201` | `{"status": "created", "page_id", "slug", "outcome", "live"}` | a new page was created |
 | `200` | `{"status": "updated", "page_id", "slug", "outcome", "live"}` | redelivery of a known `Idempotency-Key` |
 | `200` | `{"status": "duplicate", "page_id"}` | the page for that key was deleted, or a concurrent delivery with the same key won |
-| `400` | `{"detail"}` | invalid JSON, missing `llm_response`, or an `Idempotency-Key` over 255 characters |
+| `400` | `{"detail"}` | invalid JSON, missing `llm_response`, no usable title, or an `Idempotency-Key` over 255 characters |
 | `401` | `{"detail"}` | missing or invalid credentials |
 | `415` | `{"detail"}` | the body is not `application/json` |
 | `422` | `{"detail": "unsupported"}` | `mode` is not `article` |
@@ -347,7 +347,7 @@ Responses for v5:
 | `201` | `{"status": "published", "result_id", "revision", "pages"}` | the first delivery of a result |
 | `200` | `{"status": "updated", "result_id", "revision", "pages"}` | a newer revision of a known result |
 | `200` | `{"status": "duplicate", "result_id", "revision"}` | a replayed delivery id, or the stored revision redelivered with identical bytes |
-| `400` | `{"detail"}` | invalid payload, a language outside `SEMANTICHUB_INGEST_LANGUAGES`, `revision` outside 1 to 2^31-1, or a missing or overlong delivery id |
+| `400` | `{"detail"}` | invalid payload, no usable title, a language outside `SEMANTICHUB_INGEST_LANGUAGES`, `revision` outside 1 to 2^31-1, or a missing or overlong delivery id |
 | `401` | `{"detail"}` | missing or invalid credentials |
 | `415` | `{"detail"}` | the body is not `application/json` |
 | `409` | `{"detail", "result_id", "revision"}` | an older revision than the stored one, the stored revision with different content, or a delivery id reused with a different payload; `revision` is the stored one |

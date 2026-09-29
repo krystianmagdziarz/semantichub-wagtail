@@ -11,6 +11,29 @@ from semantichub_wagtail.settings import allowed_languages
 MAX_SLUG_BASE_LENGTH = 200
 MAX_REVISION = 2**31 - 1
 
+_UNDECOMPOSABLE_LETTERS = str.maketrans(
+    {
+        "ł": "l",
+        "Ł": "L",
+        "đ": "d",
+        "Đ": "D",
+        "ð": "d",
+        "Ð": "D",
+        "ø": "o",
+        "Ø": "O",
+        "ß": "ss",
+        "æ": "ae",
+        "Æ": "AE",
+        "œ": "oe",
+        "Œ": "OE",
+        "þ": "th",
+        "Þ": "Th",
+        "ħ": "h",
+        "Ħ": "H",
+        "\u0131": "i",
+    }
+)
+
 SUPPORTED_VERSIONS = (None, 3, 5)
 
 
@@ -46,9 +69,12 @@ class Identity:
     locales: dict
 
 
+def _slugify(source):
+    return slugify(source.translate(_UNDECOMPOSABLE_LETTERS))[:MAX_SLUG_BASE_LENGTH].strip("-")
+
+
 def _slug_base(cluster):
-    source = content.text(cluster.get("url_slug")) or content.text(cluster.get("name"))
-    return slugify(source)[:MAX_SLUG_BASE_LENGTH].strip("-")
+    return _slugify(content.text(cluster.get("url_slug")) or content.text(cluster.get("name")))
 
 
 def _version(data):
@@ -120,8 +146,7 @@ def _locale_body(locale):
 
 
 def _locale_slug_base(locale, title):
-    source = content.text(locale.get("slug")) or title
-    return slugify(source)[:MAX_SLUG_BASE_LENGTH].strip("-")
+    return _slugify(content.text(locale.get("slug")) or title)
 
 
 def _first_cluster(data):
@@ -162,6 +187,13 @@ def article_for_locale(data, language_code, locale):
 
 
 def parse_article(data):
+    article = _parse_article(data)
+    if not article.title:
+        raise InvalidPayload("title is required")
+    return article
+
+
+def _parse_article(data):
     if not isinstance(data, dict):
         raise InvalidPayload("payload must be a JSON object")
     clusters = data.get("clusters")

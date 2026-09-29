@@ -159,6 +159,12 @@ class TestHostilePayloads:
         payload["clusters"][0]["url_slug"] = "a" * 400
         assert len(parse_article(payload).slug_base) <= 200
 
+    def test_polish_letters_are_transliterated_in_slug(self):
+        payload = make_payload()
+        del payload["clusters"][0]["url_slug"]
+        payload["clusters"][0]["name"] = "Jak wybrać łóżko? Łódź, Gdańsk"
+        assert parse_article(payload).slug_base == "jak-wybrac-lozko-lodz-gdansk"
+
     def test_non_string_cluster_name_does_not_break_slug(self):
         payload = make_payload()
         del payload["clusters"][0]["url_slug"]
@@ -340,3 +346,10 @@ def test_v5_both_titles_empty_fall_back_to_cluster_name():
     data["locales"]["en"]["title"] = ""
     article = article_for_locale(data, "en", data["locales"]["en"])
     assert article.title == "How to build passive income"
+
+
+def test_v5_slug_from_polish_title_keeps_every_letter():
+    data = make_v5_payload()
+    del data["locales"]["pl"]["slug"]
+    data["locales"]["pl"]["title"] = "Źródła dochodu: łatwe i złożone"
+    assert parse_article(data).slug_base == "zrodla-dochodu-latwe-i-zlozone"
