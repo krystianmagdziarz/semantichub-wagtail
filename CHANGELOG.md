@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-29
+
+### Security
+
+- The manifest push refuses a `SEMANTICHUB_API_BASE_URL` that is not
+  `https://`, so the agent token is never sent in clear text;
+  `semantichub_push_manifest` exits 1 with a message saying so.
+- A rejected manifest push logs only the HTTP status, not the response body.
+
 ### Added
 
 - Branch coverage reporting with a 95% gate, uploaded to Codecov from CI.
@@ -15,6 +24,7 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 
 - Tests treat warnings as errors and run with strict pytest markers and config.
+- Test payloads carry only the fields the package reads.
 
 ### Fixed
 
@@ -95,7 +105,8 @@ First public release.
 - Cover image downloads restricted to public HTTPS hosts, pinned to the
   resolved address, with redirect, size, time and file type limits.
 
-[Unreleased]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/krystianmagdziarz/semantichub-wagtail/releases/tag/v0.1.0

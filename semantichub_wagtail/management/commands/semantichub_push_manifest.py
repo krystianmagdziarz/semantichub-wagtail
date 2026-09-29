@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from semantichub_wagtail.manifest import is_configured, push_manifest
+from semantichub_wagtail.manifest import is_configured, push_manifest, uses_https
 
 
 class Command(BaseCommand):
@@ -16,6 +16,8 @@ class Command(BaseCommand):
                 "SEMANTICHUB_API_BASE_URL, SEMANTICHUB_AGENT_TOKEN and "
                 "SEMANTICHUB_GOAL_ID must be set"
             )
+        if not uses_https():
+            raise CommandError("SEMANTICHUB_API_BASE_URL must use https")
         if not push_manifest():
             raise CommandError("manifest push failed, see logs")
         self.stdout.write(self.style.SUCCESS("semantichub manifest pushed"))

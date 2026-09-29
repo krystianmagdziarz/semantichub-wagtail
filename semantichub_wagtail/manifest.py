@@ -33,6 +33,10 @@ def is_configured() -> bool:
     return bool(sh_settings.api_base_url() and sh_settings.agent_token() and sh_settings.goal_id())
 
 
+def uses_https() -> bool:
+    return sh_settings.api_base_url().lower().startswith("https://")
+
+
 def manifest_url() -> str:
     base = sh_settings.api_base_url().rstrip("/")
     return f"{base}/api/goals/{sh_settings.goal_id()}/target-manifest"
@@ -41,6 +45,9 @@ def manifest_url() -> str:
 def push_manifest(client=None) -> bool:
     if not is_configured():
         logger.debug("semantichub_manifest_push_skipped reason=not_configured")
+        return False
+    if not uses_https():
+        logger.warning("semantichub_manifest_push_skipped reason=insecure_base_url")
         return False
 
     headers = {
@@ -61,11 +68,7 @@ def push_manifest(client=None) -> bool:
 
     status_code = getattr(response, "status_code", 0)
     if status_code >= 400:
-        logger.warning(
-            "semantichub_manifest_push_rejected status=%s body=%r",
-            status_code,
-            str(getattr(response, "text", ""))[:500],
-        )
+        logger.warning("semantichub_manifest_push_rejected status=%s", status_code)
         return False
 
     logger.info("semantichub_manifest_push_ok status=%s", status_code)

@@ -33,19 +33,20 @@ def test_build_manifest_includes_adapter_fields(monkeypatch):
 
 
 class FakeResponse:
-    def __init__(self, status_code):
+    def __init__(self, status_code, text=""):
         self.status_code = status_code
-        self.text = ""
+        self.text = text
 
 
 class FakeClient:
-    def __init__(self, status_code=200):
+    def __init__(self, status_code=200, text=""):
         self.status_code = status_code
+        self.text = text
         self.calls = []
 
     def put(self, url, headers=None, json=None):
         self.calls.append({"url": url, "headers": headers, "json": json})
-        return FakeResponse(self.status_code)
+        return FakeResponse(self.status_code, self.text)
 
 
 def test_is_configured_requires_all_three(settings):
@@ -96,6 +97,26 @@ def test_push_manifest_returns_false_on_http_error(settings):
     settings.SEMANTICHUB_GOAL_ID = "goal-1"
     client = FakeClient(status_code=422)
     assert push_manifest(client=client) is False
+
+
+def test_push_manifest_refuses_plain_http(settings):
+    settings.SEMANTICHUB_API_BASE_URL = "http://example.test"
+    settings.SEMANTICHUB_AGENT_TOKEN = "tok-123"
+    settings.SEMANTICHUB_GOAL_ID = "goal-1"
+    client = FakeClient()
+    assert push_manifest(client=client) is False
+    assert client.calls == []
+
+
+def test_rejected_push_does_not_log_the_response_body(settings, caplog):
+    settings.SEMANTICHUB_API_BASE_URL = "https://example.test"
+    settings.SEMANTICHUB_AGENT_TOKEN = "tok-123"
+    settings.SEMANTICHUB_GOAL_ID = "goal-1"
+    client = FakeClient(status_code=500, text="Traceback: internal detail")
+    with caplog.at_level("WARNING", logger="semantichub_wagtail.manifest"):
+        assert push_manifest(client=client) is False
+    assert "status=500" in caplog.text
+    assert "internal detail" not in caplog.text
 
 
 def test_push_manifest_swallows_transport_errors(settings):
