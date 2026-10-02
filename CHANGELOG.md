@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+- Docs: receiver fields may declare `role: "tags"`; SemanticHub then proposes
+  the value. No code change; requires SemanticHub with receiver-field
+  suggestions.
+
 ## [0.3.1] - 2026-09-29
 
 ### Security

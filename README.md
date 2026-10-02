@@ -210,8 +210,25 @@ flag). Each entry has the shape SemanticHub's target manifest expects:
     "required": True,
     "multiple": False,  # only "enum" may be True
     "options": [{"value": "news", "label": "News"}],  # required for "enum"
+    "role": None,  # or "tags" for a "text" field
 }
 ```
+
+`role: "tags"` (only for `type: "text"`) tells SemanticHub to fill the field
+with the topic names of the story cluster when nothing else sets it, also
+for goals without a workflow. The value arrives in `payload["fields"]` as
+comma-separated text; split it in `apply_fields()`:
+
+```python
+def apply_fields(self, page, fields):
+    names = [n.strip() for n in fields.get("tags", "").split(",") if n.strip()]
+    if names:
+        page.tags.set(names)
+```
+
+The package's own `apply_tags()` keeps working and receives `payload["tags"]`.
+Declare a `tags` field only when the site must require tags or wants
+editors to choose them in SemanticHub.
 
 Before any page, publication or receipt is saved, every `required` field is
 checked against `payload["fields"]`. Missing means absent, `None`, `""` or an
