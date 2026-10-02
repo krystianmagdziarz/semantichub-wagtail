@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-02
+
+- Successful deliveries answer with `post_status` (`publish`, `pending` or
+  `draft`) and `url` (the page's full URL, left out when the page is outside
+  every Wagtail site), both at the top level for the source-language page and
+  for every page in `pages`. The top level also repeats `page_id` and `slug`.
+  SemanticHub stores the URL and status, so its UI links to the article and
+  doesn't promise a live page while it waits in moderation.
+- `tests/contract/payload-v5` holds a copy of SemanticHub's golden payload v5
+  deliveries, refreshed with `scripts/sync-from-semantichub.sh`, and
+  `tests/test_contract.py` replays every case for push receivers.
+- `scripts/run-tests.sh` and `scripts/check-package.sh` run the CI checks
+  locally. CI publishes a GitHub release when a `vX.Y.Z` tag is pushed.
 - Docs: receiver fields may declare `role: "tags"`; SemanticHub then proposes
   the value. No code change; requires SemanticHub with receiver-field
   suggestions.

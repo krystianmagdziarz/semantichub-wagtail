@@ -1,0 +1,418 @@
+{
+  "description": "Wszystkie typy sekcji dla odbiorcy z `inline_sections`: kotwica `sh/section` zostaje w body.",
+  "expect": {
+    "category": null,
+    "content_contains": [
+      "Pierwszy akapit wyniku.",
+      "Czy to działa?",
+      "Akapit po kotwicy.",
+      "Moc zainstalowana",
+      "Odnawialne źródła energii.",
+      "Wniosek C."
+    ],
+    "content_excludes": [
+      "[[sekcja:",
+      "sh/section",
+      "Opis SEO wyniku."
+    ],
+    "image": false,
+    "meta": {
+      "_semantichub_seo_description": "Opis SEO wyniku."
+    },
+    "result_id": "639de11f-2211-55c5-871a-68e3e22f8b59",
+    "revision": 1,
+    "status": "draft",
+    "title": "Nowe farmy wiatrowe na Bałtyku"
+  },
+  "name": "02-article-inline-sections",
+  "payload": {
+    "ai_model": "mistral-medium-3.1",
+    "articles": [
+      {
+        "author": "Redakcja",
+        "content": "Pełna treść artykułu źródłowego.",
+        "id": "69f414fd-5cca-52ee-b9a1-6f1df0e7adab",
+        "lead": "Ministerstwo wydało zgody.",
+        "main_image_url": "",
+        "portal_name": "Portal Energetyczny",
+        "published_date": "2026-09-23T08:00:00+00:00",
+        "title": "Trzy zgody dla farm wiatrowych",
+        "url": "https://portal.example.test/farmy"
+      }
+    ],
+    "articles_count": 1,
+    "clusters": [
+      {
+        "article_count": 1,
+        "description": "Zgody na morskie farmy wiatrowe.",
+        "goal_id": "5e65eb2f-7a6d-5550-a965-a7bd300850f8",
+        "id": "8f519e52-3ee1-5c22-a717-a3e78009db46",
+        "name": "Farmy wiatrowe na Bałtyku",
+        "publication_ready": true,
+        "publication_threshold": 1,
+        "related_clusters": [],
+        "semantic_groups": {},
+        "similarity_threshold": 0.8,
+        "url_slug": "farmy-wiatrowe-na-baltyku"
+      }
+    ],
+    "cost": 0.0042,
+    "event": "workflow.action",
+    "executed_at": "2026-09-24T10:00:00+00:00",
+    "lead": "Trzy projekty dostały zgodę.",
+    "llm_response": "Pierwszy akapit wyniku.\n\n## Najczestsze pytania\n\n### Czy to działa?\n\nTak, w każdej wersji.\n\nAkapit po kotwicy.\n\n### W skrocie\n\n- Punkt pierwszy.\n- Punkt drugi.\n\n### Moc zainstalowana\n\n| Źródło | GW |\n| --- | --- |\n| Wiatr | 10 |\n| Słońce | 20 |\n\n## Slowniczek\n\n- OZE — Odnawialne źródła energii.\n\n## Kalendarium\n\n- 2024 — Start projektu.\n- 2026 — Uruchomienie.\n\n## Najwazniejsze\n\n- Wniosek A.\n- Wniosek B.\n- Wniosek C.\n\n## Liczby\n\n- Moc — 30 GW\n\n## Porównanie\n\n| Opcja | Zalety | Wady |\n| --- | --- | --- |\n| Wiatr | Tani | Zmienny |\n| Słońce | Prosty | Noc |",
+    "locales": {
+      "pl": {
+        "body": "Pierwszy akapit wyniku.\n\n## Najczestsze pytania\n\n### Czy to działa?\n\nTak, w każdej wersji.\n\nAkapit po kotwicy.\n\n### W skrocie\n\n- Punkt pierwszy.\n- Punkt drugi.\n\n### Moc zainstalowana\n\n| Źródło | GW |\n| --- | --- |\n| Wiatr | 10 |\n| Słońce | 20 |\n\n## Slowniczek\n\n- OZE — Odnawialne źródła energii.\n\n## Kalendarium\n\n- 2024 — Start projektu.\n- 2026 — Uruchomienie.\n\n## Najwazniejsze\n\n- Wniosek A.\n- Wniosek B.\n- Wniosek C.\n\n## Liczby\n\n- Moc — 30 GW\n\n## Porównanie\n\n| Opcja | Zalety | Wady |\n| --- | --- | --- |\n| Wiatr | Tani | Zmienny |\n| Słońce | Prosty | Noc |",
+        "body_html": "<p>Pierwszy akapit wyniku.</p>\n<h2>Najczestsze pytania</h2>\n<h3>Czy to działa?</h3>\n<p>Tak, w każdej wersji.</p>\n<p>Akapit po kotwicy.</p>\n<h3>W skrocie</h3>\n<ul>\n<li>Punkt pierwszy.</li>\n<li>Punkt drugi.</li>\n</ul>\n<h3>Moc zainstalowana</h3>\n<table>\n<thead>\n<tr>\n<th>Źródło</th>\n<th>GW</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Wiatr</td>\n<td>10</td>\n</tr>\n<tr>\n<td>Słońce</td>\n<td>20</td>\n</tr>\n</tbody>\n</table>\n<h2>Slowniczek</h2>\n<ul>\n<li>OZE — Odnawialne źródła energii.</li>\n</ul>\n<h2>Kalendarium</h2>\n<ul>\n<li>2024 — Start projektu.</li>\n<li>2026 — Uruchomienie.</li>\n</ul>\n<h2>Najwazniejsze</h2>\n<ul>\n<li>Wniosek A.</li>\n<li>Wniosek B.</li>\n<li>Wniosek C.</li>\n</ul>\n<h2>Liczby</h2>\n<ul>\n<li>Moc — 30 GW</li>\n</ul>\n<h2>Porównanie</h2>\n<table>\n<thead>\n<tr>\n<th>Opcja</th>\n<th>Zalety</th>\n<th>Wady</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>Wiatr</td>\n<td>Tani</td>\n<td>Zmienny</td>\n</tr>\n<tr>\n<td>Słońce</td>\n<td>Prosty</td>\n<td>Noc</td>\n</tr>\n</tbody>\n</table>\n",
+        "lead": "Trzy projekty dostały zgodę.",
+        "seo_description": "Trzy projekty dostały zgodę.",
+        "slug": "nowe-farmy-wiatrowe-na-baltyku",
+        "title": "Nowe farmy wiatrowe na Bałtyku"
+      }
+    },
+    "mode": "article",
+    "pair_source_lang": "pl",
+    "payload_version": 5,
+    "published_at": "2026-09-24T10:00:00+00:00",
+    "result_id": "639de11f-2211-55c5-871a-68e3e22f8b59",
+    "revision": 1,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Pierwszy akapit wyniku."
+            },
+            "type": "core/paragraph"
+          },
+          {
+            "data": {
+              "key": "faq"
+            },
+            "type": "sh/section"
+          },
+          {
+            "data": {
+              "content": "Akapit po kotwicy."
+            },
+            "type": "core/paragraph"
+          }
+        ],
+        "data": [
+          "Pierwszy akapit wyniku.",
+          "[[sekcja:faq]]",
+          "Akapit po kotwicy."
+        ],
+        "key": "body",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "W skrocie",
+              "level": 3
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "values": [
+                "Punkt pierwszy.",
+                "Punkt drugi."
+              ]
+            },
+            "type": "core/list"
+          }
+        ],
+        "data": [
+          "Punkt pierwszy.",
+          "Punkt drugi."
+        ],
+        "key": "tldr",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Najczestsze pytania",
+              "level": 2
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "content": "Czy to działa?",
+              "level": 3
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "content": "Tak, w każdej wersji."
+            },
+            "type": "core/paragraph"
+          }
+        ],
+        "data": [
+          {
+            "a": "Tak, w każdej wersji.",
+            "q": "Czy to działa?"
+          }
+        ],
+        "key": "faq",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Moc zainstalowana",
+              "level": 3
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "body": [
+                [
+                  "Źródło",
+                  "GW"
+                ],
+                [
+                  "Wiatr",
+                  "10"
+                ],
+                [
+                  "Słońce",
+                  "20"
+                ]
+              ]
+            },
+            "type": "core/table"
+          }
+        ],
+        "data": {
+          "caption": "Moc zainstalowana",
+          "head": [
+            "Źródło",
+            "GW"
+          ],
+          "rows": [
+            [
+              "Wiatr",
+              "10"
+            ],
+            [
+              "Słońce",
+              "20"
+            ]
+          ]
+        },
+        "key": "table",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Slowniczek",
+              "level": 2
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "values": [
+                "OZE — Odnawialne źródła energii."
+              ]
+            },
+            "type": "core/list"
+          }
+        ],
+        "data": [
+          {
+            "definition": "Odnawialne źródła energii.",
+            "term": "OZE"
+          }
+        ],
+        "key": "glossary",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Kalendarium",
+              "level": 2
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "values": [
+                "2024 — Start projektu.",
+                "2026 — Uruchomienie."
+              ]
+            },
+            "type": "core/list"
+          }
+        ],
+        "data": [
+          {
+            "date": "2024",
+            "event": "Start projektu."
+          },
+          {
+            "date": "2026",
+            "event": "Uruchomienie."
+          }
+        ],
+        "key": "timeline",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Najwazniejsze",
+              "level": 2
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "values": [
+                "Wniosek A.",
+                "Wniosek B.",
+                "Wniosek C."
+              ]
+            },
+            "type": "core/list"
+          }
+        ],
+        "data": [
+          "Wniosek A.",
+          "Wniosek B.",
+          "Wniosek C."
+        ],
+        "key": "takeaways",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Liczby",
+              "level": 2
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "values": [
+                "Moc — 30 GW"
+              ]
+            },
+            "type": "core/list"
+          }
+        ],
+        "data": {
+          "items": [
+            {
+              "icon": "chart",
+              "label": "Moc",
+              "value": "30 GW"
+            }
+          ],
+          "title": "Liczby",
+          "variant": "stats_grid"
+        },
+        "key": "infographic",
+        "status": "ok"
+      },
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Porównanie",
+              "level": 2
+            },
+            "type": "core/heading"
+          },
+          {
+            "data": {
+              "body": [
+                [
+                  "Opcja",
+                  "Zalety",
+                  "Wady"
+                ],
+                [
+                  "Wiatr",
+                  "Tani",
+                  "Zmienny"
+                ],
+                [
+                  "Słońce",
+                  "Prosty",
+                  "Noc"
+                ]
+              ]
+            },
+            "type": "core/table"
+          }
+        ],
+        "data": {
+          "items": [
+            {
+              "cons": [
+                "Zmienny"
+              ],
+              "name": "Wiatr",
+              "pros": [
+                "Tani"
+              ]
+            },
+            {
+              "cons": [
+                "Noc"
+              ],
+              "name": "Słońce",
+              "pros": [
+                "Prosty"
+              ]
+            }
+          ],
+          "title": "Porównanie"
+        },
+        "key": "comparison",
+        "status": "ok"
+      },
+      {
+        "blocks": [],
+        "data": {
+          "description": "Opis SEO wyniku.",
+          "keywords": [
+            "energia",
+            "oze"
+          ],
+          "title": "Tytuł SEO"
+        },
+        "key": "seo",
+        "status": "ok"
+      }
+    ],
+    "source_lang": "pl",
+    "steps": {},
+    "title": "Nowe farmy wiatrowe na Bałtyku",
+    "tokens_used": 1200,
+    "workflow_execution": "639de11f-2211-55c5-871a-68e3e22f8b59",
+    "workflow_name": "Energetyka"
+  },
+  "receivers": [
+    "plugin"
+  ]
+}

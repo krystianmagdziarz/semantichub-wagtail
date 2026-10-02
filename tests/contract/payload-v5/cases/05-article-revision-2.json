@@ -1,0 +1,108 @@
+{
+  "description": "Druga wersja tego samego wyniku: odbiorca aktualizuje ten sam wpis, nie tworzy nowego.",
+  "expect": {
+    "category": null,
+    "content_contains": [
+      "Zgody są już cztery."
+    ],
+    "content_excludes": [],
+    "image": false,
+    "result_id": "6312f3dc-bb57-56b3-a6fa-30434849cce0",
+    "revision": 2,
+    "status": "draft",
+    "title": "Nowe farmy wiatrowe na Bałtyku (aktualizacja)",
+    "updates_revision_1_of": "6312f3dc-bb57-56b3-a6fa-30434849cce0"
+  },
+  "name": "05-article-revision-2",
+  "payload": {
+    "ai_model": "mistral-medium-3.1",
+    "articles": [
+      {
+        "author": "Redakcja",
+        "content": "Pełna treść artykułu źródłowego.",
+        "id": "69f414fd-5cca-52ee-b9a1-6f1df0e7adab",
+        "lead": "Ministerstwo wydało zgody.",
+        "main_image_url": "",
+        "portal_name": "Portal Energetyczny",
+        "published_date": "2026-09-23T08:00:00+00:00",
+        "title": "Trzy zgody dla farm wiatrowych",
+        "url": "https://portal.example.test/farmy"
+      }
+    ],
+    "articles_count": 1,
+    "clusters": [
+      {
+        "article_count": 1,
+        "description": "Zgody na morskie farmy wiatrowe.",
+        "goal_id": "ad9bf403-0bc6-5d2d-a037-125b245dc4f4",
+        "id": "6b6b62fe-7b58-5bc5-94e0-b711b77f9d21",
+        "name": "Farmy wiatrowe na Bałtyku",
+        "publication_ready": true,
+        "publication_threshold": 1,
+        "related_clusters": [],
+        "semantic_groups": {},
+        "similarity_threshold": 0.8,
+        "url_slug": "farmy-wiatrowe-na-baltyku"
+      }
+    ],
+    "cost": 0.0042,
+    "event": "cluster.updated",
+    "executed_at": "2026-09-24T10:00:00+00:00",
+    "lead": "Trzy projekty dostały zgodę.",
+    "llm_response": "Zgody są już cztery.\n\nBudowa ruszy w 2027 roku.",
+    "locales": {
+      "pl": {
+        "body": "Zgody są już cztery.\n\nBudowa ruszy w 2027 roku.",
+        "body_html": "<p>Zgody są już cztery.</p>\n<p>Budowa ruszy w 2027 roku.</p>\n",
+        "lead": "Trzy projekty dostały zgodę.",
+        "seo_description": "Trzy projekty dostały zgodę.",
+        "slug": "nowe-farmy-wiatrowe-na-baltyku-aktualizacja",
+        "title": "Nowe farmy wiatrowe na Bałtyku (aktualizacja)"
+      }
+    },
+    "mode": "article",
+    "new_articles": [
+      "af0b6b2b-11d4-5930-ad8c-c71582164cfd"
+    ],
+    "pair_source_lang": "pl",
+    "parent_execution": "6312f3dc-bb57-56b3-a6fa-30434849cce0",
+    "payload_version": 5,
+    "published_at": "2026-09-24T10:00:00+00:00",
+    "result_id": "6312f3dc-bb57-56b3-a6fa-30434849cce0",
+    "revision": 2,
+    "sections": [
+      {
+        "blocks": [
+          {
+            "data": {
+              "content": "Zgody są już cztery."
+            },
+            "type": "core/paragraph"
+          },
+          {
+            "data": {
+              "content": "Budowa ruszy w 2027 roku."
+            },
+            "type": "core/paragraph"
+          }
+        ],
+        "data": [
+          "Zgody są już cztery.",
+          "Budowa ruszy w 2027 roku."
+        ],
+        "key": "body",
+        "status": "ok"
+      }
+    ],
+    "source_lang": "pl",
+    "steps": {},
+    "title": "Nowe farmy wiatrowe na Bałtyku (aktualizacja)",
+    "tokens_used": 1200,
+    "workflow_execution": "6350cc8a-4f78-5432-bef9-8d46484f9124",
+    "workflow_name": "Energetyka"
+  },
+  "receivers": [
+    "http",
+    "plugin"
+  ]
+}

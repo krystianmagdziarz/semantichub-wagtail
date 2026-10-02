@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -90,3 +91,21 @@ jobs:
           name: dist
           path: dist/
           retention-days: 7
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install build twine
+      - run: bash scripts/check-package.sh --tag "${GITHUB_REF_NAME}"
+      - run: python -m build
+      - run: gh release create "${GITHUB_REF_NAME}" dist/* --title "${GITHUB_REF_NAME}" --notes-from-tag
+        env:
+          GH_TOKEN: ${{ github.token }}

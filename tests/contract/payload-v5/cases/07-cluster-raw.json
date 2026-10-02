@@ -1,0 +1,62 @@
+{
+  "description": "Surowy klaster bez tekstu. Odbiornik tekstu odrzuca go jako `unsupported` (F2); wtyczce WP backend go nie wysyła.",
+  "expect": {
+    "accepted": false,
+    "result_id": "5ae99781-ea12-5996-a2cc-578667cbfe6b",
+    "revision": 1
+  },
+  "name": "07-cluster-raw",
+  "payload": {
+    "ai_model": "mistral-medium-3.1",
+    "articles": [
+      {
+        "author": "Redakcja",
+        "content": "Pełna treść artykułu źródłowego.",
+        "id": "69f414fd-5cca-52ee-b9a1-6f1df0e7adab",
+        "lead": "Ministerstwo wydało zgody.",
+        "main_image_url": "",
+        "portal_name": "Portal Energetyczny",
+        "published_date": "2026-09-23T08:00:00+00:00",
+        "title": "Trzy zgody dla farm wiatrowych",
+        "url": "https://portal.example.test/farmy"
+      }
+    ],
+    "articles_count": 1,
+    "clusters": [
+      {
+        "article_count": 1,
+        "description": "Zgody na morskie farmy wiatrowe.",
+        "goal_id": "cf44f35e-6c77-5e47-9676-eac776d8e3f9",
+        "id": "ebe8a369-071e-56b1-b009-9859ea0aba5f",
+        "name": "Farmy wiatrowe na Bałtyku",
+        "publication_ready": true,
+        "publication_threshold": 1,
+        "related_clusters": [],
+        "semantic_groups": {},
+        "similarity_threshold": 0.8,
+        "url_slug": "farmy-wiatrowe-na-baltyku"
+      }
+    ],
+    "cost": 0.0042,
+    "event": "workflow.action",
+    "executed_at": "2026-09-24T10:00:00+00:00",
+    "lead": null,
+    "llm_response": null,
+    "mode": "cluster",
+    "pair_source_lang": "pl",
+    "payload_version": 5,
+    "published_at": "2026-09-24T10:00:00+00:00",
+    "result_id": "5ae99781-ea12-5996-a2cc-578667cbfe6b",
+    "revision": 1,
+    "source_lang": "pl",
+    "steps": {},
+    "title": null,
+    "tokens_used": 1200,
+    "workflow_execution": "5ae99781-ea12-5996-a2cc-578667cbfe6b",
+    "workflow_name": "Energetyka"
+  },
+  "receivers": [
+    "http",
+    "plugin"
+  ]
+}

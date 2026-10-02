@@ -347,8 +347,8 @@ Responses for v2 and v3:
 
 | Status | Body | When |
 | --- | --- | --- |
-| `201` | `{"status": "created", "page_id", "slug", "outcome", "live"}` | a new page was created |
-| `200` | `{"status": "updated", "page_id", "slug", "outcome", "live"}` | redelivery of a known `Idempotency-Key` |
+| `201` | `{"status": "created", "page_id", "slug", "outcome", "live", "post_status", "url"}` | a new page was created |
+| `200` | `{"status": "updated", "page_id", "slug", "outcome", "live", "post_status", "url"}` | redelivery of a known `Idempotency-Key` |
 | `200` | `{"status": "duplicate", "page_id"}` | the page for that key was deleted, or a concurrent delivery with the same key won |
 | `400` | `{"detail"}` | invalid JSON, missing `llm_response`, no usable title, or an `Idempotency-Key` over 255 characters |
 | `401` | `{"detail"}` | missing or invalid credentials |
@@ -361,8 +361,8 @@ Responses for v5:
 
 | Status | Body | When |
 | --- | --- | --- |
-| `201` | `{"status": "published", "result_id", "revision", "pages"}` | the first delivery of a result |
-| `200` | `{"status": "updated", "result_id", "revision", "pages"}` | a newer revision of a known result |
+| `201` | `{"status": "published", "result_id", "revision", "page_id", "slug", "post_status", "url", "pages"}` | the first delivery of a result |
+| `200` | `{"status": "updated", "result_id", "revision", "page_id", "slug", "post_status", "url", "pages"}` | a newer revision of a known result |
 | `200` | `{"status": "duplicate", "result_id", "revision"}` | a replayed delivery id, or the stored revision redelivered with identical bytes |
 | `400` | `{"detail"}` | invalid payload, no usable title, a language outside `SEMANTICHUB_INGEST_LANGUAGES`, `revision` outside 1 to 2^31-1, or a missing or overlong delivery id |
 | `401` | `{"detail"}` | missing or invalid credentials |
@@ -372,7 +372,12 @@ Responses for v5:
 | `422` | `{"detail": "missing_field:<key>"}` | a required field from `ArticleAdapter.get_fields()` is missing from `fields`; also for `test_delivery: true` |
 | `500` | `{"detail"}` | the adapter returned no parent page for one of the languages; nothing is saved |
 
-`pages` maps each language code to `{"page_id", "slug", "outcome", "live"}`.
+`pages` maps each language code to `{"page_id", "slug", "outcome", "live",
+"post_status", "url"}`. The top-level `page_id`, `slug`, `post_status` and
+`url` repeat the source-language page, so SemanticHub can store where the
+article lives. `post_status` is `publish` for a live page, `pending` while a
+moderation workflow runs and `draft` otherwise. `url` is the page's full URL
+and is left out when the page sits outside every Wagtail site.
 `outcome` is one of `moderation`, `draft` or `published`. SemanticHub bumps
 `revision` on a 409 that carries `revision` and retries.
 
@@ -451,6 +456,25 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the pull request checklist and
 
 The test suite runs against a throwaway Wagtail project in `tests/` with
 example adapters in `tests/testapp`.
+
+`scripts/` holds what CI runs:
+
+- `run-tests.sh`: ruff, the migrations check and pytest.
+- `check-package.sh [--tag vX.Y.Z]`: builds the sdist and wheel, runs
+  `twine check`, and checks that the version, the changelog entry and the
+  tag agree.
+- `sync-from-semantichub.sh [--check]`: refreshes `tests/contract/payload-v5`,
+  the golden deliveries SemanticHub publishes for every receiver.
+  `tests/test_contract.py` replays each case meant for push receivers.
+
+## Releasing
+
+1. Bump `__version__` in `semantichub_wagtail/__init__.py` and move the
+   `Unreleased` changelog entries under the new version.
+2. Commit, tag `vX.Y.Z` on that commit and push the tag. CI checks that the
+   tag matches the version, builds the package and attaches it to a GitHub
+   release.
+3. Installations pin the tag in `pyproject.toml` (`[tool.uv.sources]`).
 
 ## License
 

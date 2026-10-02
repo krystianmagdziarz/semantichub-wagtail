@@ -33,6 +33,14 @@ MAX_KEY_LENGTH = 255
 MAX_IMAGE_URL_LENGTH = 2048
 
 
+def post_status(page, outcome):
+    if page.live:
+        return "publish"
+    if outcome == "moderation":
+        return "pending"
+    return "draft"
+
+
 def find_publication(result_id):
     return IngestPublication.objects.select_for_update().filter(result_id=result_id).first()
 
@@ -285,11 +293,17 @@ class InboundArticleView(APIView):
             delivery_id=delivery_id, payload_hash=digest, publication=publication
         )
 
+        location = {
+            key: pages[source_lang][key]
+            for key in ("page_id", "slug", "url", "post_status")
+            if key in pages[source_lang]
+        }
         return Response(
             {
                 "status": "published" if created_now else "updated",
                 "result_id": str(identity.result_id),
                 "revision": identity.revision,
+                **location,
                 "pages": pages,
             },
             status=status.HTTP_201_CREATED if created_now else status.HTTP_200_OK,
@@ -341,4 +355,14 @@ class InboundArticleView(APIView):
         return self._outcome(page, outcome)
 
     def _outcome(self, page, outcome):
-        return {"page_id": page.id, "slug": page.slug, "outcome": outcome, "live": page.live}
+        result = {
+            "page_id": page.id,
+            "slug": page.slug,
+            "outcome": outcome,
+            "live": page.live,
+            "post_status": post_status(page, outcome),
+        }
+        url = page.full_url
+        if url:
+            result["url"] = url
+        return result
