@@ -292,6 +292,23 @@ values for both, for example `python -c "import secrets; print(secrets.token_url
 this site calling out to SemanticHub, not SemanticHub calling in. Leaving
 any of them unset makes `push_manifest()` a silent no-op, logged at `debug`.
 
+### Disconnecting and reconnecting
+
+The connection lives only in these settings, so there is no button for it.
+To disconnect, remove `SEMANTICHUB_INGEST_TOKEN`, `SEMANTICHUB_INGEST_SECRET`,
+`SEMANTICHUB_AGENT_TOKEN` and `SEMANTICHUB_GOAL_ID` from the environment and
+restart the application. From then on every delivery gets `401` and the
+manifest push does nothing. On the SemanticHub side, revoke the agent token
+(Profile & account → API tokens) and switch the goal's channel off or point
+it elsewhere; otherwise every new result ends as a failed delivery (`401`).
+
+To connect again, set new values on both sides: a new secret in the goal's
+HTTP channel and in `SEMANTICHUB_INGEST_SECRET`, and a new agent token and
+goal id for the manifest. Pages and the `semantichub_wagtail` tables stay.
+A goal from the same SemanticHub account keeps updating the pages it
+created, because `result_id` still maps to them. A different account sends
+different `result_id` values, so its deliveries create new pages.
+
 ## Publish policy
 
 Every delivery is attributed to a `semantichub` system account, created
