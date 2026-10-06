@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-06
+
+- `tests/contract/payload-v5` refreshed from SemanticHub: entries may carry
+  `source_type`, and a newsletter issue may arrive without a source URL
+  (case 08). No code change.
+
 ## [0.4.0] - 2026-10-02
 
 - Successful deliveries answer with `post_status` (`publish`, `pending` or

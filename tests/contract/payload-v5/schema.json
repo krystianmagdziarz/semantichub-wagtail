@@ -82,6 +82,7 @@
         "id": { "type": "string" },
         "title": { "type": "string" },
         "url": { "type": "string" },
+        "source_type": { "type": "string" },
         "portal_name": { "type": "string" },
         "author": { "type": ["string", "null"] },
         "published_date": { "type": ["string", "null"] },
